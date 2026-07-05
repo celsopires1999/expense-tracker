@@ -1,0 +1,92 @@
+@baseUrl = http://host.docker.internal:8080
+@token = {{loginUser.response.body.$}}
+
+### ===========================================
+# HEALTH
+# ===========================================
+
+### Health Check
+GET {{baseUrl}}/health
+
+### ===========================================
+# USERS
+# ===========================================
+
+### Register User
+# @name createUser
+POST {{baseUrl}}/users/register
+Content-Type: application/json
+
+{
+  "email": "john.doe@user.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "password": "Str0ngP@ss!"
+}
+
+### Login
+# @name loginUser
+POST {{baseUrl}}/users/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@user.com",
+  "password": "Str0ngP@ss!"
+}
+
+### Get User by ID (requires users:access permission)
+GET {{baseUrl}}/users/{{createUser.response.body.$}}
+Authorization: Bearer {{token}}
+
+### ===========================================
+# TODOS
+# ===========================================
+
+### Create Todo
+# @name createTodo
+POST {{baseUrl}}/todos
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "userId": "{{createUser.response.body.$}}",
+  "description": "Buy groceries",
+  "dueDate": "2026-07-01T00:00:00Z",
+  "labels": ["personal", "urgent"],
+  "priority": 2
+}
+
+### List Todos by User
+GET {{baseUrl}}/todos?userId={{createUser.response.body.$}}
+Authorization: Bearer {{token}}
+
+### Get Todo by ID
+GET {{baseUrl}}/todos/{{createTodo.response.body.$}}
+Authorization: Bearer {{token}}
+
+### Complete Todo
+PUT {{baseUrl}}/todos/{{createTodo.response.body.$}}/complete
+Authorization: Bearer {{token}}
+
+### Copy Todo
+# @name copyTodo
+POST {{baseUrl}}/todos/{{createTodo.response.body.$}}/copy
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "userId": "{{createUser.response.body.$}}",
+  "todoId": "{{createTodo.response.body.$}}"
+}
+
+### Delete Todo
+DELETE {{baseUrl}}/todos/{{createTodo.response.body.$}}
+Authorization: Bearer {{token}}
+
+### ===========================================
+# ERROR CASES
+# ===========================================
+
+### Get Todo - Not Found (expects 404)
+GET {{baseUrl}}/todos/{{$guid}}
+Authorization: Bearer {{token}}
