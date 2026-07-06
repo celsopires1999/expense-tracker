@@ -1,0 +1,21 @@
+schema: spec-driven
+
+# Project context (optional)
+# This is shown to AI when creating artifacts.
+# Add your tech stack, conventions, style guides, domain knowledge, etc.
+context: |
+  .NET 10 (C#), DDD + CQRS, PostgreSQL, JWT, Serilog.
+  5 projects: SharedKernel, Domain, Application, Infrastructure, Web.Api.
+  Explicit typing, file-scoped namespaces, internal sealed types.
+  ALL development MUST happen inside the devcontainer (.devcontainer/).
+  Never install SDKs or tools on the host. Start infra with docker compose up -d.
+
+# Per-artifact rules (optional)
+# Add custom rules for specific artifacts.
+# Example:
+#   rules:
+#     proposal:
+#       - Keep proposals under 500 words
+#       - Always include a "Non-goals" section
+#     tasks:
+#       - Break tasks into chunks of max 2 hours

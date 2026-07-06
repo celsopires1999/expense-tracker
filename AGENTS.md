@@ -18,7 +18,7 @@
 ```
 src/
 ├── SharedKernel/     — DDD abstractions (Entity, Error, Result, IDomainEvent, IDateTimeProvider)
-├── Domain/           — entities, value objects, domain events (TodoItem, User) — depends only on SharedKernel
+├── Domain/           — entities, value objects, domain events (Expense, Category, User) — depends only on SharedKernel
 ├── Application/      — CQRS commands/queries, handlers, validation — depends on Domain + SharedKernel
 ├── Infrastructure/   — EF Core (Npgsql), JWT auth, permissions, Serilog — depends on Application
 └── Web.Api/          — minimal API endpoints, middleware, Program (entrypoint) — depends on Infrastructure
@@ -63,6 +63,14 @@ CI runs `dotnet restore → build → test → publish ExpenseTracker.slnx` on p
 | seq | 8081 | Structured log viewer |
 
 Connection strings reference `host.docker.internal` for reaching the host from containers.
+
+## Development rules
+
+- **ALL development MUST happen inside the devcontainer.** Never install SDKs, tools, or databases on the host.
+- Start infra services (`postgres`, `seq`) with `docker compose up -d` from inside the devcontainer.
+- Code, build, run migrations, and test from the devcontainer's terminal.
+- `docker compose` commands run inside the devcontainer via Docker socket (DooD) — no Docker-in-Docker.
+- The devcontainer is defined in `.devcontainer/` and is the single source of truth for the dev environment.
 
 ## Key differences from defaults
 

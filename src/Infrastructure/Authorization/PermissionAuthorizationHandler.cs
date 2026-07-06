@@ -1,36 +1,50 @@
-﻿using Infrastructure.Authentication;
+﻿using System.Security.Claims;
+using Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Infrastructure.Authorization;
 
-internal sealed class PermissionAuthorizationHandler(IServiceScopeFactory serviceScopeFactory)
+internal sealed class PermissionAuthorizationHandler(IServiceScopeFactory serviceScopeFactory, IMemoryCache cache)
     : AuthorizationHandler<PermissionRequirement>
 {
     protected override async Task HandleRequirementAsync(
         AuthorizationHandlerContext context,
         PermissionRequirement requirement)
     {
-        // TODO: You definitely want to reject unauthenticated users here.
-        if (context.User is { Identity.IsAuthenticated: true })
+        if (context.User is not { Identity.IsAuthenticated: true })
         {
-            // TODO: Remove this call when you implement the PermissionProvider.GetForUserIdAsync
-            context.Succeed(requirement);
-
             return;
         }
 
-        using IServiceScope scope = serviceScopeFactory.CreateScope();
-
-        PermissionProvider permissionProvider = scope.ServiceProvider.GetRequiredService<PermissionProvider>();
-
         Guid userId = context.User.GetUserId();
+        int version = GetPermissionVersion(context.User);
 
-        HashSet<string> permissions = await permissionProvider.GetForUserIdAsync(userId);
+        string cacheKey = $"perms:{userId}:v{version}";
 
-        if (permissions.Contains(requirement.Permission))
+        HashSet<string>? permissions = await cache.GetOrCreateAsync(
+            cacheKey,
+            async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5);
+
+                using IServiceScope scope = serviceScopeFactory.CreateScope();
+                PermissionProvider permissionProvider = scope.ServiceProvider.GetRequiredService<PermissionProvider>();
+
+                return await permissionProvider.GetForUserIdAsync(userId);
+            });
+
+        if (permissions is not null && permissions.Contains(requirement.Permission))
         {
             context.Succeed(requirement);
         }
+    }
+
+    private static int GetPermissionVersion(ClaimsPrincipal principal)
+    {
+        string? versionClaim = principal.FindFirstValue("perm_version");
+
+        return int.TryParse(versionClaim, out int version) ? version : 0;
     }
 }

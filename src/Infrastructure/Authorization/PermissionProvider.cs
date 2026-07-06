@@ -1,12 +1,22 @@
-﻿namespace Infrastructure.Authorization;
+﻿using Application.Abstractions.Data;
+using Microsoft.EntityFrameworkCore;
 
-internal sealed class PermissionProvider
+namespace Infrastructure.Authorization;
+
+internal sealed class PermissionProvider(IApplicationDbContext context)
 {
-    public Task<HashSet<string>> GetForUserIdAsync(Guid userId)
+    public async Task<HashSet<string>> GetForUserIdAsync(Guid userId)
     {
-        // TODO: Here you'll implement your logic to fetch permissions.
-        HashSet<string> permissionsSet = [];
+        List<string> permissions = await context.UserRoles
+            .Where(ur => ur.UserId == userId)
+            .Join(
+                context.RolePermissions,
+                ur => ur.RoleId,
+                rp => rp.RoleId,
+                (ur, rp) => rp.Permission)
+            .Distinct()
+            .ToListAsync();
 
-        return Task.FromResult(permissionsSet);
+        return [.. permissions];
     }
 }

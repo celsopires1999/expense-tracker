@@ -35,6 +35,8 @@ public static class DependencyInjection
 
         services.AddTransient<IDomainEventsDispatcher, DomainEventsDispatcher>();
 
+        services.AddMemoryCache();
+
         return services;
     }
 

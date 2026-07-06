@@ -39,54 +39,90 @@ GET {{baseUrl}}/users/{{createUser.response.body.$}}
 Authorization: Bearer {{token}}
 
 ### ===========================================
-# TODOS
+# EXPENSES
 # ===========================================
 
-### Create Todo
-# @name createTodo
-POST {{baseUrl}}/todos
+### Create Expense
+# @name createExpense
+POST {{baseUrl}}/expenses
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "userId": "{{createUser.response.body.$}}",
-  "description": "Buy groceries",
-  "dueDate": "2026-07-01T00:00:00Z",
-  "labels": ["personal", "urgent"],
-  "priority": 2
+  "description": "Supermercado",
+  "amount": 150.50,
+  "date": "2026-07-05",
+  "categoryId": "33333333-3333-3333-3333-333333333333",
+  "paymentMethodId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "tagIds": []
 }
 
-### List Todos by User
-GET {{baseUrl}}/todos?userId={{createUser.response.body.$}}
+### List Expenses
+GET {{baseUrl}}/expenses
 Authorization: Bearer {{token}}
 
-### Get Todo by ID
-GET {{baseUrl}}/todos/{{createTodo.response.body.$}}
+### List Expenses by User
+GET {{baseUrl}}/expenses?userId={{createUser.response.body.$}}
 Authorization: Bearer {{token}}
 
-### Complete Todo
-PUT {{baseUrl}}/todos/{{createTodo.response.body.$}}/complete
+### List Expenses by Date Range
+GET {{baseUrl}}/expenses?from=2026-01-01&to=2026-12-31
 Authorization: Bearer {{token}}
 
-### Copy Todo
-# @name copyTodo
-POST {{baseUrl}}/todos/{{createTodo.response.body.$}}/copy
+### List Expenses by Category
+GET {{baseUrl}}/expenses?categoryId=33333333-3333-3333-3333-333333333333
+Authorization: Bearer {{token}}
+
+### Get Expense by ID
+GET {{baseUrl}}/expenses/{{createExpense.response.body.$}}
+Authorization: Bearer {{token}}
+
+### Update Expense
+PUT {{baseUrl}}/expenses/{{createExpense.response.body.$}}
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "userId": "{{createUser.response.body.$}}",
-  "todoId": "{{createTodo.response.body.$}}"
+  "description": "Supermercado - Atualizado",
+  "amount": 200.00,
+  "date": "2026-07-05",
+  "categoryId": "33333333-3333-3333-3333-333333333333",
+  "paymentMethodId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
+  "tagIds": []
 }
 
-### Delete Todo
-DELETE {{baseUrl}}/todos/{{createTodo.response.body.$}}
+### Delete Expense
+DELETE {{baseUrl}}/expenses/{{createExpense.response.body.$}}
+Authorization: Bearer {{token}}
+
+### ===========================================
+# CATEGORIES
+# ===========================================
+
+### List Categories
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+### ===========================================
+# PAYMENT METHODS
+# ===========================================
+
+### List Payment Methods
+GET {{baseUrl}}/payment-methods
+Authorization: Bearer {{token}}
+
+### ===========================================
+# TAGS
+# ===========================================
+
+### List Tags
+GET {{baseUrl}}/tags
 Authorization: Bearer {{token}}
 
 ### ===========================================
 # ERROR CASES
 # ===========================================
 
-### Get Todo - Not Found (expects 404)
-GET {{baseUrl}}/todos/{{$guid}}
+### Get Expense - Not Found (expects 404)
+GET {{baseUrl}}/expenses/{{$guid}}
 Authorization: Bearer {{token}}

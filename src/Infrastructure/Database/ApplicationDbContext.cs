@@ -1,5 +1,9 @@
 ﻿using Application.Abstractions.Data;
-using Domain.Todos;
+using Domain.Categories;
+using Domain.Expenses;
+using Domain.PaymentMethods;
+using Domain.Roles;
+using Domain.Tags;
 using Domain.Users;
 using Infrastructure.DomainEvents;
 using Microsoft.EntityFrameworkCore;
@@ -13,8 +17,14 @@ public sealed class ApplicationDbContext(
     : DbContext(options), IApplicationDbContext
 {
     public DbSet<User> Users { get; set; }
-
-    public DbSet<TodoItem> TodoItems { get; set; }
+    public DbSet<Category> Categories { get; set; }
+    public DbSet<PaymentMethod> PaymentMethods { get; set; }
+    public DbSet<Tag> Tags { get; set; }
+    public DbSet<Expense> Expenses { get; set; }
+    public DbSet<ExpenseTag> ExpenseTags { get; set; }
+    public DbSet<Role> Roles { get; set; }
+    public DbSet<RolePermission> RolePermissions { get; set; }
+    public DbSet<UserRole> UserRoles { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
