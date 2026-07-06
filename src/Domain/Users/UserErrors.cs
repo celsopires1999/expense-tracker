@@ -19,4 +19,8 @@ public static class UserErrors
     public static readonly Error EmailNotUnique = Error.Conflict(
         "Users.EmailNotUnique",
         "The provided email is not unique");
+
+    public static readonly Error RoleNotFound = Error.Failure(
+        "Users.RoleNotFound",
+        "The default role was not found. Contact an administrator.");
 }

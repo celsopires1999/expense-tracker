@@ -1,3 +1,4 @@
+using Application.Abstractions.Authentication;
 using Application.Abstractions.Messaging;
 using Application.Expenses.Create;
 using SharedKernel;
@@ -23,10 +24,12 @@ internal sealed class Create : IEndpoint
         app.MapPost("expenses", async (
             Request request,
             ICommandHandler<CreateExpenseCommand, Guid> handler,
+            IUserContext userContext,
             CancellationToken cancellationToken) =>
         {
             var command = new CreateExpenseCommand
             {
+                UserId = userContext.UserId,
                 Description = request.Description,
                 Amount = request.Amount,
                 Date = request.Date,

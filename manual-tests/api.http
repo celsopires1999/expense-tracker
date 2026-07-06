@@ -1,5 +1,10 @@
-@baseUrl = http://host.docker.internal:8080
+# @baseUrl = http://host.docker.internal:5000
+@baseUrl = http://localhost:5000
 @token = {{loginUser.response.body.$}}
+
+# Standard role permissions (automatically assigned on register):
+#   expenses:create, expenses:read, expenses:update, expenses:delete,
+#   categories:read, payment-methods:read, tags:read, users:access
 
 ### ===========================================
 # HEALTH
@@ -12,7 +17,7 @@ GET {{baseUrl}}/health
 # USERS
 # ===========================================
 
-### Register User
+### Register User (recebe role Standard automaticamente)
 # @name createUser
 POST {{baseUrl}}/users/register
 Content-Type: application/json

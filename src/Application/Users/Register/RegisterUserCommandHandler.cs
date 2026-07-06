@@ -1,6 +1,7 @@
 ﻿using Application.Abstractions.Authentication;
 using Application.Abstractions.Data;
 using Application.Abstractions.Messaging;
+using Domain.Roles;
 using Domain.Users;
 using Microsoft.EntityFrameworkCore;
 using SharedKernel;
@@ -26,9 +27,18 @@ internal sealed class RegisterUserCommandHandler(IApplicationDbContext context, 
             PasswordHash = passwordHasher.Hash(command.Password)
         };
 
+        Role? standardRole = await context.Roles
+            .SingleOrDefaultAsync(r => r.Name == "Standard", cancellationToken);
+
+        if (standardRole is null)
+        {
+            return Result.Failure<Guid>(UserErrors.RoleNotFound);
+        }
+
         user.Raise(new UserRegisteredDomainEvent(user.Id));
 
         context.Users.Add(user);
+        context.UserRoles.Add(new UserRole { UserId = user.Id, RoleId = standardRole.Id });
 
         await context.SaveChangesAsync(cancellationToken);
 

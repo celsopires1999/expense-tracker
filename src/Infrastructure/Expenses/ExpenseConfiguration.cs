@@ -35,7 +35,7 @@ internal sealed class ExpenseConfiguration : IEntityTypeConfiguration<Expense>
             .HasForeignKey(e => e.PaymentMethodId);
 
         builder.HasMany(e => e.Tags)
-            .WithOne()
+            .WithOne(et => et.Expense)
             .HasForeignKey(et => et.ExpenseId);
 
         builder.Property(e => e.CreatedAt)
