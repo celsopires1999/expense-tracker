@@ -40,3 +40,19 @@ list-migrations:
 # Run architecture tests
 test:
     dotnet test tests/ArchitectureTests
+
+# Run all tests
+test-all:
+    dotnet test ExpenseTracker.slnx
+
+# Format code according to .editorconfig rules
+format:
+    dotnet format ExpenseTracker.slnx
+
+# Run the API with hot reload (Swagger at /swagger — http://localhost:5000)
+watch:
+    dotnet watch run --project "{{startup_project}}"
+
+# Clean all build artifacts
+clean:
+    dotnet clean ExpenseTracker.slnx
