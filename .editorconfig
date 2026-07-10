@@ -417,3 +417,8 @@ dotnet_diagnostic.S6605.severity = none
 
 # S6781: JWT secret keys should not be disclosed
 dotnet_diagnostic.S6781.severity = none
+
+# Migrations directories — auto-generated code, relax style rules
+[src/**/Migrations/**]
+dotnet_diagnostic.IDE0161.severity = none   # file-scoped namespace
+dotnet_diagnostic.CA1861.severity = none    # static readonly over constant array

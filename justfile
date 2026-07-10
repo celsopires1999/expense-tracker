@@ -1,5 +1,17 @@
-migrations_project := "src/Infrastructure"
-startup_project := "src/Web.Api"
+# Service ports
+#   Auth.Api       → 5100
+#   Permission.Api → 5200
+#   Expense.Api    → 5000
+
+auth_migrations := "src/Auth/Auth.Infrastructure"
+auth_startup := "src/Auth/Auth.Api"
+
+perm_migrations := "src/Permission/Permission.Infrastructure"
+perm_startup := "src/Permission/Permission.Api"
+
+expense_migrations := "src/Expense/Expense.Infrastructure"
+expense_startup := "src/Expense/Expense.Api"
+
 db_context := "ApplicationDbContext"
 
 default:
@@ -9,33 +21,77 @@ default:
 build:
     dotnet build ExpenseTracker.slnx
 
-# Run the API (Swagger at /swagger — http://localhost:5000)
-api: build
-    dotnet run --project "{{startup_project}}"
+# Run Auth.Api (Swagger — http://localhost:5100/swagger)
+api-auth: build
+    dotnet run --project "{{auth_startup}}"
 
-# Create a new migration (usage: just add-migration "MigrationName")
-add-migration name:
-    dotnet ef migrations add {{name}} --project "{{migrations_project}}" --startup-project "{{startup_project}}" --context {{db_context}}
+# Run Permission.Api (Swagger — http://localhost:5200/swagger)
+api-perm: build
+    dotnet run --project "{{perm_startup}}"
 
-# Apply all pending migrations
-migrate:
-    dotnet ef database update --project "{{migrations_project}}" --startup-project "{{startup_project}}" --context {{db_context}}
+# Run Expense.Api (Swagger — http://localhost:5000/swagger)
+api-expense: build
+    dotnet run --project "{{expense_startup}}"
 
-# Revert all migrations (back to empty state)
-rollback:
-    dotnet ef database update 0 --project "{{migrations_project}}" --startup-project "{{startup_project}}" --context {{db_context}}
+# Run all three services (requires 3 terminals)
+api: api-auth & api-perm & api-expense
 
-# Revert to a specific migration (usage: just rollback-to "MigrationName")
-rollback-to name:
-    dotnet ef database update {{name}} --project "{{migrations_project}}" --startup-project "{{startup_project}}" --context {{db_context}}
+# Auth Service migrations
+add-migration-auth name:
+    dotnet ef migrations add {{name}} --project "{{auth_migrations}}" --startup-project "{{auth_startup}}" --context {{db_context}}
 
-# Remove the last migration
-remove-migration:
-    dotnet ef migrations remove --project "{{migrations_project}}" --startup-project "{{startup_project}}" --context {{db_context}}
+migrate-auth:
+    dotnet ef database update --project "{{auth_migrations}}" --startup-project "{{auth_startup}}" --context {{db_context}}
 
-# List all migrations
-list-migrations:
-    dotnet ef migrations list --project "{{migrations_project}}" --startup-project "{{startup_project}}" --context {{db_context}}
+rollback-auth:
+    dotnet ef database update 0 --project "{{auth_migrations}}" --startup-project "{{auth_startup}}" --context {{db_context}}
+
+rollback-to-auth name:
+    dotnet ef database update {{name}} --project "{{auth_migrations}}" --startup-project "{{auth_startup}}" --context {{db_context}}
+
+remove-migration-auth:
+    dotnet ef migrations remove --project "{{auth_migrations}}" --startup-project "{{auth_startup}}" --context {{db_context}}
+
+list-migrations-auth:
+    dotnet ef migrations list --project "{{auth_migrations}}" --startup-project "{{auth_startup}}" --context {{db_context}}
+
+# Permission Service migrations
+add-migration-perm name:
+    dotnet ef migrations add {{name}} --project "{{perm_migrations}}" --startup-project "{{perm_startup}}" --context {{db_context}}
+
+migrate-perm:
+    dotnet ef database update --project "{{perm_migrations}}" --startup-project "{{perm_startup}}" --context {{db_context}}
+
+rollback-perm:
+    dotnet ef database update 0 --project "{{perm_migrations}}" --startup-project "{{perm_startup}}" --context {{db_context}}
+
+rollback-to-perm name:
+    dotnet ef database update {{name}} --project "{{perm_migrations}}" --startup-project "{{perm_startup}}" --context {{db_context}}
+
+remove-migration-perm:
+    dotnet ef migrations remove --project "{{perm_migrations}}" --startup-project "{{perm_startup}}" --context {{db_context}}
+
+list-migrations-perm:
+    dotnet ef migrations list --project "{{perm_migrations}}" --startup-project "{{perm_startup}}" --context {{db_context}}
+
+# Expense Service migrations
+add-migration-expense name:
+    dotnet ef migrations add {{name}} --project "{{expense_migrations}}" --startup-project "{{expense_startup}}" --context {{db_context}}
+
+migrate-expense:
+    dotnet ef database update --project "{{expense_migrations}}" --startup-project "{{expense_startup}}" --context {{db_context}}
+
+rollback-expense:
+    dotnet ef database update 0 --project "{{expense_migrations}}" --startup-project "{{expense_startup}}" --context {{db_context}}
+
+rollback-to-expense name:
+    dotnet ef database update {{name}} --project "{{expense_migrations}}" --startup-project "{{expense_startup}}" --context {{db_context}}
+
+remove-migration-expense:
+    dotnet ef migrations remove --project "{{expense_migrations}}" --startup-project "{{expense_startup}}" --context {{db_context}}
+
+list-migrations-expense:
+    dotnet ef migrations list --project "{{expense_migrations}}" --startup-project "{{expense_startup}}" --context {{db_context}}
 
 # Run architecture tests
 test:
@@ -48,10 +104,6 @@ test-all:
 # Format code according to .editorconfig rules
 format:
     dotnet format ExpenseTracker.slnx
-
-# Run the API with hot reload (Swagger at /swagger — http://localhost:5000)
-watch:
-    dotnet watch run --project "{{startup_project}}"
 
 # Clean all build artifacts
 clean:

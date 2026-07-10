@@ -1,25 +1,23 @@
-# @baseUrl = http://host.docker.internal:5000
-@baseUrl = http://localhost:5000
-@token = {{loginUser.response.body.$}}
+### ===========================================
+# BASE URLS
+# ===========================================
+@authBaseUrl = http://localhost:5100
+@permBaseUrl = http://localhost:5200
+@expenseBaseUrl = http://localhost:5000
 
-# Standard role permissions (automatically assigned on register):
-#   expenses:create, expenses:read, expenses:update, expenses:delete,
-#   categories:read, payment-methods:read, tags:read, users:access
+### Admin role GUID
+@adminRoleId = 11111111-1111-1111-1111-111111111111
+
+### Seeded category (Alimentação, available in clean DB)
+@seededCategoryId = 33333333-3333-3333-3333-333333333333
 
 ### ===========================================
-# HEALTH
+# AUTH SERVICE
 # ===========================================
 
-### Health Check
-GET {{baseUrl}}/health
-
-### ===========================================
-# USERS
-# ===========================================
-
-### Register User (recebe role Standard automaticamente)
-# @name createUser
-POST {{baseUrl}}/users/register
+### Register User (auto-assigned Standard role)
+# @name registerUser
+POST {{authBaseUrl}}/auth/register
 Content-Type: application/json
 
 {
@@ -29,9 +27,9 @@ Content-Type: application/json
   "password": "Str0ngP@ss!"
 }
 
-### Login
-# @name loginUser
-POST {{baseUrl}}/users/login
+### Login (Standard user — only has read permissions on most resources)
+# @name loginStandard
+POST {{authBaseUrl}}/auth/login
 Content-Type: application/json
 
 {
@@ -39,95 +37,283 @@ Content-Type: application/json
   "password": "Str0ngP@ss!"
 }
 
-### Get User by ID (requires users:access permission)
-GET {{baseUrl}}/users/{{createUser.response.body.$}}
-Authorization: Bearer {{token}}
+### Get User by ID (requires users:access, which Standard has)
+GET {{authBaseUrl}}/auth/users/{{registerUser.response.body.$}}
+Authorization: Bearer {{loginStandard.response.body.token}}
+
+### Assign Admin Role to user (requires auth — Standard token works)
+POST {{authBaseUrl}}/auth/users/{{registerUser.response.body.$}}/roles/{{adminRoleId}}
+Authorization: Bearer {{loginStandard.response.body.token}}
+
+### Login again (token now includes Admin role — has full permissions)
+# @name loginAdmin
+POST {{authBaseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@user.com",
+  "password": "Str0ngP@ss!"
+}
+
+### Remove Admin Role (tests role removal with Admin token)
+DELETE {{authBaseUrl}}/auth/users/{{registerUser.response.body.$}}/roles/{{adminRoleId}}
+Authorization: Bearer {{loginAdmin.response.body.token}}
+
+### Login again (token back to Standard only, after role removal)
+# @name loginStandardAfter
+POST {{authBaseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@user.com",
+  "password": "Str0ngP@ss!"
+}
+
+### Assign Admin Role back (so subsequent operations can create/edit/delete)
+POST {{authBaseUrl}}/auth/users/{{registerUser.response.body.$}}/roles/{{adminRoleId}}
+Authorization: Bearer {{loginStandardAfter.response.body.token}}
+
+### Login final (Admin token for all remaining CRUD operations)
+# @name loginAdminFinal
+POST {{authBaseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@user.com",
+  "password": "Str0ngP@ss!"
+}
+
+@authToken = {{loginAdminFinal.response.body.token}}
+
+### JWKS Public Key Set
+GET {{authBaseUrl}}/.well-known/jwks
 
 ### ===========================================
-# EXPENSES
+# PERMISSION SERVICE
 # ===========================================
 
-### Create Expense
-# @name createExpense
-POST {{baseUrl}}/expenses
+### Create Role
+# @name createRole
+POST {{permBaseUrl}}/permissions/roles
 Content-Type: application/json
-Authorization: Bearer {{token}}
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Manager",
+  "permissions": [
+    "expenses:create",
+    "expenses:read",
+    "expenses:update",
+    "expenses:delete",
+    "categories:create",
+    "categories:read",
+    "categories:update",
+    "categories:delete",
+    "payment-methods:read",
+    "tags:read",
+    "users:access"
+  ]
+}
+
+### List Roles
+GET {{permBaseUrl}}/permissions/roles
+Authorization: Bearer {{authToken}}
+
+### Get Role by ID
+GET {{permBaseUrl}}/permissions/roles/{{createRole.response.body.$}}
+Authorization: Bearer {{authToken}}
+
+### Update Role Permissions
+PUT {{permBaseUrl}}/permissions/roles/{{createRole.response.body.$}}/permissions
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+[
+  "expenses:read",
+  "categories:read",
+  "payment-methods:read",
+  "tags:read"
+]
+
+### Delete Role
+DELETE {{permBaseUrl}}/permissions/roles/{{createRole.response.body.$}}
+Authorization: Bearer {{authToken}}
+
+### Resolve Permissions (used internally by Expense Service — no auth needed)
+POST {{permBaseUrl}}/permissions/resolve
+Content-Type: application/json
+
+{
+  "roles": ["Standard"]
+}
+
+### ===========================================
+# EXPENSE SERVICE — Health
+# ===========================================
+
+### Health Check
+GET {{expenseBaseUrl}}/health
+
+### ===========================================
+# EXPENSE SERVICE — Categories
+# ===========================================
+
+### Create Category (Admin permission: categories:create)
+# @name createCategory
+POST {{expenseBaseUrl}}/categories
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Test Category"
+}
+
+### List Categories
+GET {{expenseBaseUrl}}/categories
+Authorization: Bearer {{authToken}}
+
+### Update Category
+PUT {{expenseBaseUrl}}/categories/{{createCategory.response.body.$}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Updated Category"
+}
+
+### Delete Category
+DELETE {{expenseBaseUrl}}/categories/{{createCategory.response.body.$}}
+Authorization: Bearer {{authToken}}
+
+### ===========================================
+# EXPENSE SERVICE — Payment Methods
+# ===========================================
+
+### Create Payment Method (Admin permission: payment-methods:create)
+# @name createPaymentMethod
+POST {{expenseBaseUrl}}/payment-methods
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Cartão de Crédito"
+}
+
+### List Payment Methods
+GET {{expenseBaseUrl}}/payment-methods
+Authorization: Bearer {{authToken}}
+
+### Update Payment Method
+PUT {{expenseBaseUrl}}/payment-methods/{{createPaymentMethod.response.body.$}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "Cartão de Crédito Visa"
+}
+
+### ===========================================
+# EXPENSE SERVICE — Tags
+# ===========================================
+
+### Create Tag (Admin permission: tags:create)
+# @name createTag
+POST {{expenseBaseUrl}}/tags
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "urgente"
+}
+
+### List Tags
+GET {{expenseBaseUrl}}/tags
+Authorization: Bearer {{authToken}}
+
+### Update Tag
+PUT {{expenseBaseUrl}}/tags/{{createTag.response.body.$}}
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "name": "prioridade"
+}
+
+### ===========================================
+# EXPENSE SERVICE — Expenses
+# ===========================================
+
+### Create Expense (uses seeded category + created payment method + tag)
+# Note: The seeded category "Alimentação" (33333333-...) is available
+# in a clean database after running migrations.
+# @name createExpense
+POST {{expenseBaseUrl}}/expenses
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
 
 {
   "description": "Supermercado",
   "amount": 150.50,
   "date": "2026-07-05",
-  "categoryId": "33333333-3333-3333-3333-333333333333",
-  "paymentMethodId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "tagIds": []
+  "categoryId": "{{seededCategoryId}}",
+  "paymentMethodId": "{{createPaymentMethod.response.body.$}}",
+  "tagIds": ["{{createTag.response.body.$}}"]
 }
 
 ### List Expenses
-GET {{baseUrl}}/expenses
-Authorization: Bearer {{token}}
+GET {{expenseBaseUrl}}/expenses
+Authorization: Bearer {{authToken}}
 
 ### List Expenses by User
-GET {{baseUrl}}/expenses?userId={{createUser.response.body.$}}
-Authorization: Bearer {{token}}
+GET {{expenseBaseUrl}}/expenses?userId={{registerUser.response.body.$}}
+Authorization: Bearer {{authToken}}
 
 ### List Expenses by Date Range
-GET {{baseUrl}}/expenses?from=2026-01-01&to=2026-12-31
-Authorization: Bearer {{token}}
+GET {{expenseBaseUrl}}/expenses?from=2026-01-01&to=2026-12-31
+Authorization: Bearer {{authToken}}
 
 ### List Expenses by Category
-GET {{baseUrl}}/expenses?categoryId=33333333-3333-3333-3333-333333333333
-Authorization: Bearer {{token}}
+GET {{expenseBaseUrl}}/expenses?categoryId={{seededCategoryId}}
+Authorization: Bearer {{authToken}}
 
 ### Get Expense by ID
-GET {{baseUrl}}/expenses/{{createExpense.response.body.$}}
-Authorization: Bearer {{token}}
+GET {{expenseBaseUrl}}/expenses/{{createExpense.response.body.$}}
+Authorization: Bearer {{authToken}}
 
 ### Update Expense
-PUT {{baseUrl}}/expenses/{{createExpense.response.body.$}}
+PUT {{expenseBaseUrl}}/expenses/{{createExpense.response.body.$}}
 Content-Type: application/json
-Authorization: Bearer {{token}}
+Authorization: Bearer {{authToken}}
 
 {
   "description": "Supermercado - Atualizado",
   "amount": 200.00,
   "date": "2026-07-05",
-  "categoryId": "33333333-3333-3333-3333-333333333333",
-  "paymentMethodId": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa",
-  "tagIds": []
+  "categoryId": "{{seededCategoryId}}",
+  "paymentMethodId": "{{createPaymentMethod.response.body.$}}",
+  "tagIds": ["{{createTag.response.body.$}}"]
 }
 
 ### Delete Expense
-DELETE {{baseUrl}}/expenses/{{createExpense.response.body.$}}
-Authorization: Bearer {{token}}
+DELETE {{expenseBaseUrl}}/expenses/{{createExpense.response.body.$}}
+Authorization: Bearer {{authToken}}
 
 ### ===========================================
-# CATEGORIES
+# CLEANUP — Delete created payment method and tag
 # ===========================================
 
-### List Categories
-GET {{baseUrl}}/categories
-Authorization: Bearer {{token}}
+### Delete Payment Method
+DELETE {{expenseBaseUrl}}/payment-methods/{{createPaymentMethod.response.body.$}}
+Authorization: Bearer {{authToken}}
 
-### ===========================================
-# PAYMENT METHODS
-# ===========================================
-
-### List Payment Methods
-GET {{baseUrl}}/payment-methods
-Authorization: Bearer {{token}}
-
-### ===========================================
-# TAGS
-# ===========================================
-
-### List Tags
-GET {{baseUrl}}/tags
-Authorization: Bearer {{token}}
+### Delete Tag
+DELETE {{expenseBaseUrl}}/tags/{{createTag.response.body.$}}
+Authorization: Bearer {{authToken}}
 
 ### ===========================================
 # ERROR CASES
 # ===========================================
 
-### Get Expense - Not Found (expects 404)
-GET {{baseUrl}}/expenses/{{$guid}}
-Authorization: Bearer {{token}}
+### Get Expense — Not Found (expects 404)
+GET {{expenseBaseUrl}}/expenses/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa
+Authorization: Bearer {{authToken}}
