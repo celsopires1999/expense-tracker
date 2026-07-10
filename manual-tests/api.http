@@ -83,6 +83,7 @@ Content-Type: application/json
   "password": "Str0ngP@ss!"
 }
 
+###
 @authToken = {{loginAdminFinal.response.body.token}}
 
 ### JWKS Public Key Set
