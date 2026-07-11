@@ -46,4 +46,7 @@ RUN mkdir -p /home/developer/.vscode-server && \
 
 ENV PATH="/home/developer/.dotnet/tools:${PATH}"
 
+USER developer
+RUN dotnet tool install --global dotnet-ef
+
 ENTRYPOINT ["tail", "-f", "/dev/null"]
