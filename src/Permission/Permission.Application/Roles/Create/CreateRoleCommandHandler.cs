@@ -17,6 +17,16 @@ internal sealed class CreateRoleCommandHandler(IPermissionDbContext context)
         };
 
         context.Roles.Add(role);
+
+        foreach (string permission in command.Permissions)
+        {
+            context.RolePermissions.Add(new RolePermission
+            {
+                RoleId = role.Id,
+                Permission = permission
+            });
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
         return role.Id;
