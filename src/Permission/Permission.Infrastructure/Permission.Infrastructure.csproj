@@ -6,10 +6,12 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="MassTransit" />
     <PackageReference Include="MassTransit.EntityFrameworkCore" />
+    <PackageReference Include="MassTransit.RabbitMQ" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Permission.Application\Permission.Application.csproj" />
+    <ProjectReference Include="..\..\SharedKernel\SharedKernel.csproj" />
   </ItemGroup>
 
 </Project>

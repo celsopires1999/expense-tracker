@@ -20,7 +20,7 @@ public sealed class ExpenseApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
 
-        builder.UseSetting("ConnectionStrings:Database", PostgreSqlFixture.Instance.ConnectionString);
+        builder.UseSetting("ConnectionStrings:Database", PostgreSqlFixture.Instance.DefaultConnectionString);
         builder.UseSetting("Jwt:Issuer", "auth-service");
         builder.UseSetting("Jwt:Audience", "expense-tracker");
         builder.UseSetting("Serilog:Using", string.Empty);

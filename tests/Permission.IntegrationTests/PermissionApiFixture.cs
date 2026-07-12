@@ -1,10 +1,13 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
+using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.IdentityModel.Tokens;
 using Permission.Application.Abstractions.Data;
 using Permission.Infrastructure.Database;
@@ -18,7 +21,7 @@ public sealed class PermissionApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
 
-        builder.UseSetting("ConnectionStrings:Database", PostgreSqlFixture.Instance.ConnectionString);
+        builder.UseSetting("ConnectionStrings:Database", PostgreSqlFixture.Instance.DefaultConnectionString);
         builder.UseSetting("Jwt:Issuer", "auth-service");
         builder.UseSetting("Jwt:Audience", "expense-tracker");
         builder.UseSetting("Serilog:Using", string.Empty);
@@ -35,7 +38,33 @@ public sealed class PermissionApiFactory : WebApplicationFactory<Program>
                     IssuerSigningKey = PermissionTestHelper.GetTestSecurityKey()
                 };
             });
+
+            RemoveMassTransitServices(services);
+
+            services.AddMassTransit(x =>
+            {
+                x.UsingInMemory((context, cfg) =>
+                {
+                    cfg.ConfigureEndpoints(context);
+                });
+            });
         });
+    }
+
+    private static void RemoveMassTransitServices(IServiceCollection services)
+    {
+        var toRemove = services
+            .Where(s =>
+                (s.ServiceType.Namespace?.StartsWith("MassTransit", StringComparison.Ordinal) ?? false) ||
+                (s.ImplementationType?.Namespace?.StartsWith("MassTransit", StringComparison.Ordinal) ?? false))
+            .ToList();
+
+        foreach (ServiceDescriptor descriptor in toRemove)
+        {
+            services.Remove(descriptor);
+        }
+
+        services.RemoveAll<IHealthCheck>();
     }
 
     public async Task InitializeDatabaseAsync()

@@ -4,6 +4,7 @@ using Auth.Application.Abstractions.Authentication;
 using Auth.Application.Abstractions.Data;
 using Auth.Infrastructure.Authentication;
 using Auth.Infrastructure.Database;
+using Auth.Infrastructure.Roles.Consumers;
 using MassTransit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
@@ -25,7 +26,7 @@ public static class DependencyInjection
             .AddDatabase(configuration)
             .AddAuthServices()
             .AddAuthenticationInternal(configuration)
-            .AddMessaging();
+            .AddMessaging(configuration);
 
     private static IServiceCollection AddDatabase(this IServiceCollection services, IConfiguration configuration)
     {
@@ -81,10 +82,14 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddMessaging(this IServiceCollection services)
+    private static IServiceCollection AddMessaging(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddMassTransit(x =>
         {
+            x.AddConsumer<RoleCreatedConsumer>();
+            x.AddConsumer<RoleUpdatedConsumer>();
+            x.AddConsumer<RoleDeletedConsumer>();
+
             x.AddEntityFrameworkOutbox<AuthDbContext>(o =>
             {
                 o.QueryDelay = TimeSpan.FromSeconds(1);
@@ -92,8 +97,14 @@ public static class DependencyInjection
                 o.UsePostgres();
             });
 
-            x.UsingInMemory((context, cfg) =>
+            x.UsingRabbitMq((context, cfg) =>
             {
+                cfg.Host(configuration["RabbitMQ:Host"], "/", h =>
+                {
+                    h.Username(configuration["RabbitMQ:User"]!);
+                    h.Password(configuration["RabbitMQ:Password"]!);
+                });
+
                 cfg.ConfigureEndpoints(context);
             });
         });

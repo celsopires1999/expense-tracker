@@ -1,4 +1,6 @@
+using System.Globalization;
 using System.Security.Cryptography;
+using Npgsql;
 using Testcontainers.PostgreSql;
 
 namespace TestShared;
@@ -40,7 +42,7 @@ public sealed class PostgreSqlFixture
         });
     }
 
-    public string ConnectionString => _containerLazy.Value.GetConnectionString();
+    public string DefaultConnectionString => _containerLazy.Value.GetConnectionString();
 
     public string PrivateKey => _privateKeyPathLazy.Value;
 
@@ -49,5 +51,34 @@ public sealed class PostgreSqlFixture
     public async Task InitializeAsync()
     {
         await _containerLazy.Value.StartAsync();
+    }
+
+    public string GetConnectionString(string dbName)
+    {
+        var builder = new NpgsqlConnectionStringBuilder(DefaultConnectionString)
+        {
+            Database = dbName
+        };
+        return builder.ConnectionString;
+    }
+
+    public async Task CreateDatabaseAsync(string dbName)
+    {
+        var baseBuilder = new NpgsqlConnectionStringBuilder(DefaultConnectionString)
+        {
+            Database = "postgres"
+        };
+
+        await using NpgsqlConnection connection = new(baseBuilder.ConnectionString);
+        await connection.OpenAsync();
+
+        const string sql = "CREATE DATABASE \"{0}\"";
+        string commandText = string.Format(CultureInfo.InvariantCulture, sql, dbName);
+
+        //dbName is a controlled constant, not user input
+        #pragma warning disable CA2100
+        await using NpgsqlCommand command = new(commandText, connection);
+        #pragma warning restore CA2100
+        await command.ExecuteNonQueryAsync();
     }
 }

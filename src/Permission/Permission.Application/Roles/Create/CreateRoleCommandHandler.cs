@@ -16,6 +16,8 @@ internal sealed class CreateRoleCommandHandler(IPermissionDbContext context)
             Name = command.Name
         };
 
+        role.Raise(new RoleCreatedDomainEvent(role.Id));
+
         context.Roles.Add(role);
 
         foreach (string permission in command.Permissions)

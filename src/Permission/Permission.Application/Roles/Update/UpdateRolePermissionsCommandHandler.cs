@@ -11,10 +11,15 @@ internal sealed class UpdateRolePermissionsCommandHandler(IPermissionDbContext c
 {
     public async Task<Result> Handle(UpdateRolePermissionsCommand command, CancellationToken cancellationToken)
     {
-        if (!await context.Roles.AnyAsync(r => r.Id == command.RoleId, cancellationToken))
+        Role? role = await context.Roles
+            .SingleOrDefaultAsync(r => r.Id == command.RoleId, cancellationToken);
+
+        if (role is null)
         {
             return Result.Failure(Error.NotFound("Role.NotFound", $"Role with Id '{command.RoleId}' was not found"));
         }
+
+        role.Raise(new RoleUpdatedDomainEvent(role.Id));
 
         List<RolePermission> existing = await context.RolePermissions
             .Where(rp => rp.RoleId == command.RoleId)

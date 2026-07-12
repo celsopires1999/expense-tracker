@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using Permission.Application;
 using Permission.Application.Abstractions.Data;
 using Permission.Infrastructure.Database;
+using Permission.Infrastructure.DomainEvents;
 
 namespace Permission.Infrastructure;
 
@@ -18,9 +19,17 @@ public static class DependencyInjection
         IConfiguration configuration) =>
         services
             .AddApplication()
+            .AddServices()
             .AddDatabase(configuration)
             .AddAuthenticationInternal(configuration)
-            .AddMessaging();
+            .AddMessaging(configuration);
+
+    private static IServiceCollection AddServices(this IServiceCollection services)
+    {
+        services.AddTransient<IDomainEventsDispatcher, DomainEventsDispatcher>();
+
+        return services;
+    }
 
     private static IServiceCollection AddDatabase(this IServiceCollection services, IConfiguration configuration)
     {
@@ -66,7 +75,7 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddMessaging(this IServiceCollection services)
+    private static IServiceCollection AddMessaging(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddMassTransit(x =>
         {
@@ -77,8 +86,14 @@ public static class DependencyInjection
                 o.UsePostgres();
             });
 
-            x.UsingInMemory((context, cfg) =>
+            x.UsingRabbitMq((context, cfg) =>
             {
+                cfg.Host(configuration["RabbitMQ:Host"], "/", h =>
+                {
+                    h.Username(configuration["RabbitMQ:User"]!);
+                    h.Password(configuration["RabbitMQ:Password"]!);
+                });
+
                 cfg.ConfigureEndpoints(context);
             });
         });

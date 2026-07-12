@@ -7,6 +7,14 @@ services:
       retries: 10
       start_period: 10s
 
+  rabbitmq:
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
   # web-api:
   #   depends_on:
   #     postgres:

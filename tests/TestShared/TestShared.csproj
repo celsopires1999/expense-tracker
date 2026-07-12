@@ -8,6 +8,8 @@
   <ItemGroup>
     <PackageReference Include="Testcontainers" />
     <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Testcontainers.RabbitMQ" />
+    <PackageReference Include="Npgsql" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="xunit" />
   </ItemGroup>

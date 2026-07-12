@@ -29,7 +29,7 @@ public static class DependencyInjection
             .AddAuthenticationInternal(configuration)
             .AddAuthorizationInternal()
             .AddPermissionClient()
-            .AddMessaging();
+            .AddMessaging(configuration);
 
     private static IServiceCollection AddServices(this IServiceCollection services)
     {
@@ -118,7 +118,7 @@ public static class DependencyInjection
         return services;
     }
 
-    private static IServiceCollection AddMessaging(this IServiceCollection services)
+    private static IServiceCollection AddMessaging(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddMassTransit(x =>
         {
@@ -128,8 +128,14 @@ public static class DependencyInjection
                 o.UsePostgres();
             });
 
-            x.UsingInMemory((context, cfg) =>
+            x.UsingRabbitMq((context, cfg) =>
             {
+                cfg.Host(configuration["RabbitMQ:Host"], "/", h =>
+                {
+                    h.Username(configuration["RabbitMQ:User"]!);
+                    h.Password(configuration["RabbitMQ:Password"]!);
+                });
+
                 cfg.ConfigureEndpoints(context);
             });
         });

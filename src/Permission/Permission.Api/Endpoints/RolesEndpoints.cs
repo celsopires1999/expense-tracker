@@ -53,6 +53,16 @@ internal sealed class RolesEndpoints : IEndpoint
         })
         .RequireAuthorization();
 
+        app.MapPut("permissions/roles/{roleId:guid}", async (Guid roleId, UpdateRoleCommand command, ICommandHandler<UpdateRoleCommand> handler, CancellationToken cancellationToken) =>
+        {
+            Result result = await handler.Handle(command with { RoleId = roleId }, cancellationToken);
+
+            return result.IsSuccess
+                ? Results.Ok()
+                : CustomResults.Problem(result);
+        })
+        .RequireAuthorization();
+
         app.MapDelete("permissions/roles/{roleId:guid}", async (Guid roleId, ICommandHandler<DeleteRoleCommand> handler, CancellationToken cancellationToken) =>
         {
             Result result = await handler.Handle(new DeleteRoleCommand(roleId), cancellationToken);

@@ -13,7 +13,7 @@ public sealed class AuthApiFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Testing");
 
-        builder.UseSetting("ConnectionStrings:Database", PostgreSqlFixture.Instance.ConnectionString);
+        builder.UseSetting("ConnectionStrings:Database", PostgreSqlFixture.Instance.DefaultConnectionString);
         builder.UseSetting("Jwt:PrivateKeyPath", PostgreSqlFixture.Instance.PrivateKey);
         builder.UseSetting("Jwt:PublicKeyPath", PostgreSqlFixture.Instance.PublicKey);
         builder.UseSetting("Jwt:Issuer", "auth-service");
