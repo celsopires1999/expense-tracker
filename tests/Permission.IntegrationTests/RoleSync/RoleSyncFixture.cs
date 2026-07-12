@@ -25,6 +25,8 @@ public sealed class RoleSyncFixture : IAsyncLifetime
     public string PermissionConnectionString { get; private set; } = string.Empty;
     public string AuthConnectionString { get; private set; } = string.Empty;
     public RsaSecurityKey TestSecurityKey => new(_rsaLazy.Value) { KeyId = "test-key" };
+    public string RabbitMqHost { get; private set; } = string.Empty;
+    public int RabbitMqPort { get; private set; }
     public string PrivateKeyPath { get; private set; } = string.Empty;
     public string PublicKeyPath { get; private set; } = string.Empty;
 
@@ -39,6 +41,9 @@ public sealed class RoleSyncFixture : IAsyncLifetime
         AuthConnectionString = PostgreSqlFixture.Instance.GetConnectionString(AuthDbName);
 
         await RabbitMQFixture.Instance.InitializeAsync();
+
+        RabbitMqHost = RabbitMQFixture.Instance.Host;
+        RabbitMqPort = RabbitMQFixture.Instance.Port;
 
         PrivateKeyPath = Path.Combine(Path.GetTempPath(), $"rolesync-priv-{Guid.NewGuid():N}.pem");
         await File.WriteAllTextAsync(PrivateKeyPath, _rsaLazy.Value.ExportPkcs8PrivateKeyPem());
@@ -57,8 +62,8 @@ public sealed class RoleSyncPermissionApiFactory(RoleSyncFixture fixture) : WebA
         builder.UseEnvironment("Testing");
 
         builder.UseSetting("ConnectionStrings:Database", fixture.PermissionConnectionString);
-        builder.UseSetting("RabbitMQ:Host", "host.docker.internal");
-        builder.UseSetting("RabbitMQ:Port", RabbitMQFixture.Instance.Port.ToString(CultureInfo.InvariantCulture));
+        builder.UseSetting("RabbitMQ:Host", fixture.RabbitMqHost);
+        builder.UseSetting("RabbitMQ:Port", fixture.RabbitMqPort.ToString(CultureInfo.InvariantCulture));
         builder.UseSetting("RabbitMQ:User", "guest");
         builder.UseSetting("RabbitMQ:Password", "guest");
         builder.UseSetting("Serilog:Using", string.Empty);
@@ -102,8 +107,8 @@ public sealed class RoleSyncAuthApiFactory(RoleSyncFixture fixture) : WebApplica
         builder.UseEnvironment("Testing");
 
         builder.UseSetting("ConnectionStrings:Database", fixture.AuthConnectionString);
-        builder.UseSetting("RabbitMQ:Host", "host.docker.internal");
-        builder.UseSetting("RabbitMQ:Port", RabbitMQFixture.Instance.Port.ToString(CultureInfo.InvariantCulture));
+        builder.UseSetting("RabbitMQ:Host", fixture.RabbitMqHost);
+        builder.UseSetting("RabbitMQ:Port", fixture.RabbitMqPort.ToString(CultureInfo.InvariantCulture));
         builder.UseSetting("RabbitMQ:User", "guest");
         builder.UseSetting("RabbitMQ:Password", "guest");
         builder.UseSetting("Jwt:PrivateKeyPath", fixture.PrivateKeyPath);
