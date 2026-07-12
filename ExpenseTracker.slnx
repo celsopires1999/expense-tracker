@@ -10,7 +10,9 @@
     <Project Path="src/Expense/Expense.Infrastructure/Expense.Infrastructure.csproj" />
     <Project Path="src/Expense/Expense.Api/Expense.Api.csproj" />
   </Folder>
-  <Folder Name="/src/" />
+  <Folder Name="/src/">
+    <Project Path="src/SharedKernel/SharedKernel.csproj" />
+  </Folder>
   <Folder Name="/src/Auth/">
     <Project Path="src/Auth/Auth.Domain/Auth.Domain.csproj" />
     <Project Path="src/Auth/Auth.Application/Auth.Application.csproj" />
