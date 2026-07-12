@@ -57,7 +57,7 @@ public sealed class RoleSyncPermissionApiFactory(RoleSyncFixture fixture) : WebA
         builder.UseEnvironment("Testing");
 
         builder.UseSetting("ConnectionStrings:Database", fixture.PermissionConnectionString);
-        builder.UseSetting("RabbitMQ:Host", RabbitMQFixture.Instance.Host);
+        builder.UseSetting("RabbitMQ:Host", "host.docker.internal");
         builder.UseSetting("RabbitMQ:Port", RabbitMQFixture.Instance.Port.ToString(CultureInfo.InvariantCulture));
         builder.UseSetting("RabbitMQ:User", "guest");
         builder.UseSetting("RabbitMQ:Password", "guest");
@@ -102,7 +102,7 @@ public sealed class RoleSyncAuthApiFactory(RoleSyncFixture fixture) : WebApplica
         builder.UseEnvironment("Testing");
 
         builder.UseSetting("ConnectionStrings:Database", fixture.AuthConnectionString);
-        builder.UseSetting("RabbitMQ:Host", RabbitMQFixture.Instance.Host);
+        builder.UseSetting("RabbitMQ:Host", "host.docker.internal");
         builder.UseSetting("RabbitMQ:Port", RabbitMQFixture.Instance.Port.ToString(CultureInfo.InvariantCulture));
         builder.UseSetting("RabbitMQ:User", "guest");
         builder.UseSetting("RabbitMQ:Password", "guest");
