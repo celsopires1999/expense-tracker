@@ -31,4 +31,7 @@ jobs:
         run: dotnet test ExpenseTracker.slnx --configuration Release --no-restore --no-build
 
       - name: Publish
-        run: dotnet publish ExpenseTracker.slnx --configuration Release --no-restore --no-build
+        run: |
+          dotnet publish src/Auth/Auth.Api/Auth.Api.csproj --configuration Release --no-restore --no-build
+          dotnet publish src/Permission/Permission.Api/Permission.Api.csproj --configuration Release --no-restore --no-build
+          dotnet publish src/Expense/Expense.Api/Expense.Api.csproj --configuration Release --no-restore --no-build
