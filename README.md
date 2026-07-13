@@ -7,7 +7,7 @@ Personal expense tracking API built with .NET 10, following Clean Architecture (
 - .NET 10
 - PostgreSQL 17 (EF Core) — one database per service
 - JWT authentication (RSA asymmetric signing)
-- MassTransit (in-memory transport + PostgreSQL outbox)
+- MassTransit (RabbitMQ transport + PostgreSQL outbox)
 - Serilog + Seq
 - Scrutor (convention-based DI registration + decoration)
 - FluentValidation
@@ -34,12 +34,14 @@ src/
     └── Expense.Api/
 ```
 
-### Cross-service auth flow
+### Cross-service communication
 
 1. **Auth Service** issues RSA-signed JWTs (RS256) and exposes `GET /.well-known/jwks`
 2. **Expense Service** validates JWTs by fetching keys from Auth's JWKS endpoint
 3. **Expense Service** resolves permissions via `POST /permissions/resolve` on Permission Service
 4. Results are cached in `IMemoryCache` (5 min TTL, keyed by `perms:{userId}`)
+5. **Permission Service** publishes role change events (`RoleCreated/Updated/DeletedEvent`) via RabbitMQ
+6. **Auth Service** consumes these events to keep its local `roles` table in sync
 
 ### Service matrix
 
@@ -49,7 +51,8 @@ src/
 | Permission.Api | 5200 | `permission-db` | `/swagger` |
 | Expense.Api | 5000 | `expense-db` | `/swagger` |
 | PostgreSQL | 5432 | — | — |
-| Seq | 8081 | — | — |
+| RabbitMQ | 5672 | — | `localhost:15672` (management) |
+| Seq | 8082 | — | — |
 
 ## Prerequisites
 
@@ -70,7 +73,7 @@ openssl rsa -in keys/auth-private.pem -pubout -out keys/auth-public.pem
 ### 2. Start infrastructure
 
 ```bash
-docker compose -f .devcontainer/docker-compose.yml up -d
+docker compose up -d
 ```
 
 ### 3. Create databases
@@ -84,9 +87,9 @@ docker compose exec postgres psql -U postgres -c "CREATE DATABASE \"expense-db\"
 ### 4. Apply migrations
 
 ```bash
-dotnet ef database update --project src/Auth/Auth.Infrastructure --startup-project src/Auth/Auth.Api
-dotnet ef database update --project src/Permission/Permission.Infrastructure --startup-project src/Permission/Permission.Api
-dotnet ef database update --project src/Expense/Expense.Infrastructure --startup-project src/Expense/Expense.Api
+dotnet ef database update --project src/Auth/Auth.Infrastructure --startup-project src/Auth/Auth.Api --context AuthDbContext
+dotnet ef database update --project src/Permission/Permission.Infrastructure --startup-project src/Permission/Permission.Api --context PermissionDbContext
+dotnet ef database update --project src/Expense/Expense.Infrastructure --startup-project src/Expense/Expense.Api --context ApplicationDbContext
 ```
 
 ### 5. Run all services
@@ -112,6 +115,7 @@ dotnet run --project src/Expense/Expense.Api
 |--------|-------|------|-------------|
 | POST | `/auth/register` | No | Register new user (auto-assigns Standard role) |
 | POST | `/auth/login` | No | Login, returns JWT |
+| GET | `/auth/users` | Yes | List all users with roles |
 | GET | `/auth/users/{id}` | Yes | Get user by ID |
 | POST | `/auth/users/{id}/roles/{roleId}` | Yes | Assign role to user |
 | DELETE | `/auth/users/{id}/roles/{roleId}` | Yes | Remove role from user |
@@ -124,6 +128,7 @@ dotnet run --project src/Expense/Expense.Api
 | POST | `/permissions/roles` | Yes | Create role |
 | GET | `/permissions/roles` | Yes | List all roles |
 | GET | `/permissions/roles/{id}` | Yes | Get role with permissions |
+| PUT | `/permissions/roles/{id}` | Yes | Update role name |
 | PUT | `/permissions/roles/{id}/permissions` | Yes | Update role permissions |
 | DELETE | `/permissions/roles/{id}` | Yes | Delete role |
 | POST | `/permissions/resolve` | No | Resolve permissions from roles |
@@ -166,6 +171,12 @@ dotnet run --project src/Expense/Expense.Api
     "Issuer": "auth-service",
     "Audience": "expense-tracker",
     "ExpirationInMinutes": 60
+  },
+  "RabbitMQ": {
+    "Host": "host.docker.internal",
+    "Port": 5672,
+    "User": "guest",
+    "Password": "guest"
   }
 }
 ```
@@ -176,6 +187,12 @@ dotnet run --project src/Expense/Expense.Api
 {
   "ConnectionStrings": {
     "Database": "Host=host.docker.internal;Port=5432;Database=permission-db;..."
+  },
+  "RabbitMQ": {
+    "Host": "host.docker.internal",
+    "Port": 5672,
+    "User": "guest",
+    "Password": "guest"
   }
 }
 ```
@@ -194,6 +211,12 @@ dotnet run --project src/Expense/Expense.Api
   },
   "PermissionService": {
     "BaseUrl": "http://localhost:5200"
+  },
+  "RabbitMQ": {
+    "Host": "host.docker.internal",
+    "Port": 5672,
+    "User": "guest",
+    "Password": "guest"
   }
 }
 ```
@@ -201,11 +224,11 @@ dotnet run --project src/Expense/Expense.Api
 ## Running inside Docker (dev container)
 
 ```bash
-docker compose -f .devcontainer/docker-compose.yml up -d
-docker compose -f .devcontainer/docker-compose.yml exec -u developer -w /workspace app sh
+docker compose up -d
+docker compose exec -u developer -w /workspace app sh
 # Inside the container:
 just build
-just api   # runs Expense.Api on port 5000
+just api-expense   # runs Expense.Api on port 5000
 ```
 
 ## Useful commands
@@ -225,6 +248,9 @@ dotnet format ExpenseTracker.slnx
 
 # Clean
 dotnet clean ExpenseTracker.slnx
+
+# List all justfile recipes
+just --list
 ```
 
 ## Seed roles

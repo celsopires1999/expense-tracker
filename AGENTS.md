@@ -27,7 +27,7 @@ tests/
 ├── Auth.IntegrationTests/     — Auth API integration tests (xunit + Testcontainers)
 ├── Expense.IntegrationTests/  — Expense API integration tests
 ├── Permission.IntegrationTests/ — Permission API integration tests
-└── TestShared/                — Shared test infrastructure (PostgreSqlFixture, MigrationApplier)
+└── TestShared/                — Shared test infrastructure (PostgreSqlFixture, RabbitMQFixture, MigrationApplier)
 ```
 
 - **Dependency flow**: SharedKernel → Context layers (innermost→outer)
@@ -38,8 +38,9 @@ tests/
 - **Auth**: RSA key-based JWT signing, JWKS endpoint (`/.well-known/jwks`)
 - **Expense/Permission**: JWKS-based key resolution from Auth.Api
 - **Expense → Permission**: `PermissionServiceClient` HTTP calls from Expense.Api to Permission.Api
+- **Permission → Auth**: Role sync via RabbitMQ — Permission publishes `RoleCreated/Updated/DeletedEvent`, Auth consumes to keep local `roles` table in sync
 - **Domain events**: dispatched via `IDomainEventsDispatcher` before `SaveChangesAsync`
-- **Messaging**: MassTransit with EF Outbox pattern + InMemory transport (per context)
+- **Messaging**: MassTransit with RabbitMQ transport + EF Outbox pattern (per context)
 - **Result pattern**: `Result<T>` from SharedKernel, mapped to HTTP via `CustomResults.Problem`
 - **Explicit typing** preferred (`.editorconfig`: `csharp_style_var_elsewhere = false`)
 - **File-scoped namespaces**, `is null`/`is not null` checks, `internal sealed` types by default
@@ -48,10 +49,10 @@ tests/
 
 ```bash
 # ── Infrastructure services (host) ──
-docker compose up -d  # starts postgres + seq at root level
+docker compose up -d  # starts development environment + postgres + seq + rabbitmq at root level
 
 # ── Alias for app container commands ──
-DC="docker compose -f .devcontainer/docker-compose.yml exec -u developer -w /workspace app"
+DC="docker compose exec -u developer -w /workspace app"
 
 # Open a shell in the app container
 $DC sh
@@ -86,7 +87,7 @@ $DC just format / format-check
 $DC just clean
 ```
 
-CI runs `dotnet restore → build → test → publish ExpenseTracker.slnx` on push to `main` and `workflow_dispatch` (.NET 10.x). See `.github/workflows/build.yml`.
+CI runs `dotnet restore → build → test → publish` individual API projects on push to `main` and `workflow_dispatch` (.NET 10.x). See `.github/workflows/build.yml`.
 
 ## Infrastructure services
 
@@ -96,6 +97,7 @@ CI runs `dotnet restore → build → test → publish ExpenseTracker.slnx` on p
 | Permission.Api | 5200 | Role & permission management |
 | Expense.Api | 5000 | Expense tracking, calls Permission.Api |
 | PostgreSQL | 5432 | 3 databases: `auth-db`, `permission-db`, `expense-db` |
+| RabbitMQ | 5672 | Message broker for role sync (management UI: `localhost:15672`) |
 | Seq | 8082 | Structured log viewer |
 
 Connection strings use `host.docker.internal` for reaching the host from containers.
@@ -103,9 +105,9 @@ Connection strings use `host.docker.internal` for reaching the host from contain
 ## Development rules
 
 - **ALL development MUST happen inside the app container.** Never run dotnet commands as root — always use `developer` user in `/workspace`.
-- Start infra services at root level with `docker compose up -d` (postgres + seq).
+- Start infra services at root level with `docker compose up -d` (postgres + seq + rabbitmq).
 - Run dotnet commands via `$DC <command>` or open a shell with `$DC sh`.
-- The Docker dev environment is defined in `.devcontainer/` and is the single source of truth.
+- The Docker dev environment is defined in `Dockerfile.dev` and is the single source of truth.
 - `docker compose` commands use Docker socket shared from the host (DooD) — no Docker-in-Docker.
 
 ## Key differences from defaults
@@ -114,5 +116,5 @@ Connection strings use `host.docker.internal` for reaching the host from contain
 - SonarAnalyzer.CSharp as analyzer in all non-dcproj projects
 - Central package management (`Directory.Packages.props`)
 - `.editorconfig` is 424 lines with strict CA/IDE/Sonar rules — many disabled intentionally
-- `justfile` with 35+ recipes for per-context operations — run via `$DC just <recipe>`
+- `justfile` with ~30 recipes for per-context operations — run via `$DC just <recipe>`, or `$DC just --list` to see all available recipes
 - `manual-tests/` with `api.http` and `full_test.sh` E2E script
