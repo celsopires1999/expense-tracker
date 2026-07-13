@@ -9,6 +9,28 @@ services:
   #     - 5000:8080
   #     - 5001:8081
 
+  app:
+    container_name: expense-tracker-developer
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+      args:
+        - USER_UID=${UID:-1000}
+        - USER_GID=${GID:-1000}
+        - DOCKER_GROUP_ID=${DOCKER_GROUP_ID:-999}
+    volumes:
+      - .:/workspace:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+      - vscode-server:/home/developer/.vscode-server
+    tty: true
+    extra_hosts:
+      - host.docker.internal:host-gateway
+
+    ports:
+      - "5000:5000"
+      - "5100:5100"
+      - "5200:5200"
+
   postgres:
     image: postgres:17
     container_name: postgres
@@ -40,3 +62,4 @@ services:
 
 volumes:
   postgres-data:
+  vscode-server:

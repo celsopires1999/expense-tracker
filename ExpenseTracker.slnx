@@ -32,7 +32,4 @@
     <Project Path="tests/Permission.IntegrationTests/Permission.IntegrationTests.csproj" />
     <Project Path="tests/TestShared/TestShared.csproj" />
   </Folder>
-  <Project Path="docker-compose.dcproj">
-    <Build />
-  </Project>
 </Solution>
