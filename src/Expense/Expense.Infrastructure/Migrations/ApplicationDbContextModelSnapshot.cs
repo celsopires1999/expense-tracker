@@ -112,6 +112,12 @@ namespace Expense.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("payment_method_id");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");

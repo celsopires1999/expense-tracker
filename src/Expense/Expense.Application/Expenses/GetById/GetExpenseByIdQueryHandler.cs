@@ -23,6 +23,7 @@ internal sealed class GetExpenseByIdQueryHandler(IApplicationDbContext context)
                 Date = e.Date,
                 CategoryId = e.CategoryId,
                 PaymentMethodId = e.PaymentMethodId,
+                Status = e.Status,
                 TagIds = e.Tags.Select(t => t.TagId).ToList(),
                 CreatedAt = e.CreatedAt,
                 UpdatedAt = e.UpdatedAt

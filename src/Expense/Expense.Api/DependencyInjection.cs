@@ -1,4 +1,6 @@
-﻿using Expense.Api.Infrastructure;
+﻿using System.Text.Json;
+using System.Text.Json.Serialization;
+using Expense.Api.Infrastructure;
 
 namespace Expense.Api;
 
@@ -10,7 +12,16 @@ public static class DependencyInjection
         services.AddSwaggerGen();
 
         // REMARK: If you want to use Controllers, you'll need this.
-        services.AddControllers();
+        services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+            });
+
+        services.Configure<JsonSerializerOptions>(options =>
+        {
+            options.Converters.Add(new JsonStringEnumConverter());
+        });
 
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddProblemDetails();

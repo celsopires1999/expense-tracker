@@ -49,6 +49,7 @@ internal sealed class CreateExpenseCommandHandler(
             Date = command.Date,
             CategoryId = command.CategoryId,
             PaymentMethodId = command.PaymentMethodId,
+            Status = ExpenseStatus.Pending,
             CreatedAt = dateTimeProvider.UtcNow
         };
 

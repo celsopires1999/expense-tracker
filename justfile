@@ -62,6 +62,14 @@ api-all:
     dotnet run --project {{expense_startup}} > /tmp/expense.log 2>&1 &
     echo "Services starting — check /tmp/{auth,perm,expense}.log"
 
+# Stop all three active api services and clean up logs
+api-stop:
+    @echo "Stopping API services..."
+    -pkill -f "dotnet run --project .*({{auth_startup}}|{{perm_startup}}|{{expense_startup}})"
+    @echo "Removing log files..."
+    rm -f /tmp/auth.log /tmp/perm.log /tmp/expense.log
+    @echo "Services stopped and logs cleaned."
+
 # ──────────── Watch (hot reload) ────────────
 
 # Watch Auth.Api (hot reload on port 5100)

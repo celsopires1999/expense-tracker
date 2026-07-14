@@ -24,6 +24,11 @@ internal sealed class ExpenseConfiguration : IEntityTypeConfiguration<Expense.Do
         builder.Property(e => e.UserId)
             .IsRequired();
 
+        builder.Property(e => e.Status)
+            .HasConversion<string>()
+            .HasMaxLength(20)
+            .IsRequired();
+
         builder.HasOne<Domain.Categories.Category>()
             .WithMany()
             .HasForeignKey(e => e.CategoryId);

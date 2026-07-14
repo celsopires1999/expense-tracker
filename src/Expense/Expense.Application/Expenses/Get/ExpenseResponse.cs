@@ -1,3 +1,5 @@
+using Expense.Domain.Expenses;
+
 namespace Expense.Application.Expenses.Get;
 
 public sealed class ExpenseResponse
@@ -9,6 +11,7 @@ public sealed class ExpenseResponse
     public DateOnly Date { get; set; }
     public Guid CategoryId { get; set; }
     public Guid PaymentMethodId { get; set; }
+    public ExpenseStatus Status { get; set; }
     public List<Guid> TagIds { get; set; } = [];
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }

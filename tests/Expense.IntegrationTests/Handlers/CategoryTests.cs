@@ -1,9 +1,9 @@
 using Expense.Application.Abstractions.Data;
 using Expense.Application.Abstractions.Messaging;
 using Expense.Application.Categories.Create;
+using Expense.Application.Categories.Delete;
 using Expense.Application.Categories.GetAll;
 using Expense.Application.Categories.Update;
-using Expense.Application.Categories.Delete;
 using Expense.Infrastructure.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;

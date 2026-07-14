@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Expense.Api.Endpoints;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Expense.Api.Extensions;
 

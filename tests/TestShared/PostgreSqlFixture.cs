@@ -76,9 +76,9 @@ public sealed class PostgreSqlFixture
         string commandText = string.Format(CultureInfo.InvariantCulture, sql, dbName);
 
         //dbName is a controlled constant, not user input
-        #pragma warning disable CA2100
+#pragma warning disable CA2100
         await using NpgsqlCommand command = new(commandText, connection);
-        #pragma warning restore CA2100
+#pragma warning restore CA2100
         await command.ExecuteNonQueryAsync();
     }
 }

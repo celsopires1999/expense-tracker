@@ -37,6 +37,11 @@ internal sealed class GetExpensesQueryHandler(IApplicationDbContext context)
             expensesQuery = expensesQuery.Where(e => e.Tags.Any(t => t.TagId == query.TagId.Value));
         }
 
+        if (query.Status.HasValue)
+        {
+            expensesQuery = expensesQuery.Where(e => e.Status == query.Status.Value);
+        }
+
         List<ExpenseResponse> expenses = await expensesQuery
             .Select(e => new ExpenseResponse
             {
@@ -47,6 +52,7 @@ internal sealed class GetExpensesQueryHandler(IApplicationDbContext context)
                 Date = e.Date,
                 CategoryId = e.CategoryId,
                 PaymentMethodId = e.PaymentMethodId,
+                Status = e.Status,
                 TagIds = e.Tags.Select(t => t.TagId).ToList(),
                 CreatedAt = e.CreatedAt,
                 UpdatedAt = e.UpdatedAt

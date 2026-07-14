@@ -1,8 +1,8 @@
+using Expense.Api.Extensions;
+using Expense.Api.Infrastructure;
 using Expense.Application.Abstractions.Messaging;
 using Expense.Application.Expenses.Delete;
 using SharedKernel;
-using Expense.Api.Extensions;
-using Expense.Api.Infrastructure;
 
 namespace Expense.Api.Endpoints.Expenses;
 

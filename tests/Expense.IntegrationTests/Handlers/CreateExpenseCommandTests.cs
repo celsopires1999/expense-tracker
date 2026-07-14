@@ -56,6 +56,7 @@ public sealed class CreateExpenseCommandTests : IClassFixture<ExpenseApiFixture>
         Assert.NotNull(expense);
         Assert.Equal("Grocery shopping", expense.Description);
         Assert.Equal(150.50m, expense.Amount);
+        Assert.Equal(ExpenseStatus.Pending, expense.Status);
     }
 
     [Fact]

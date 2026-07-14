@@ -1,11 +1,13 @@
 using System.Reflection;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Application;
+using Expense.Api;
+using Expense.Api.Extensions;
 using HealthChecks.UI.Client;
 using Infrastructure;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Serilog;
-using Expense.Api;
-using Expense.Api.Extensions;
 
 WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
@@ -19,6 +21,11 @@ builder.Services
     .AddInfrastructure(builder.Configuration);
 
 builder.Services.AddEndpoints(Assembly.GetExecutingAssembly());
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+});
 
 WebApplication app = builder.Build();
 

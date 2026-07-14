@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 
 namespace Expense.IntegrationTests.Endpoints;
 
@@ -128,6 +129,23 @@ public sealed class ExpensesEndpointTests : IClassFixture<ExpenseApiFixture>, IA
         HttpResponseMessage response = await _client.DeleteAsync($"expenses/{expenseId}");
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Get_ShouldReturnStatusAsString_NotAsInteger()
+    {
+        Guid expenseId = await CreateExpenseAsync();
+
+        HttpResponseMessage response = await _client.GetAsync($"expenses/{expenseId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        string json = await response.Content.ReadAsStringAsync();
+        using var doc = JsonDocument.Parse(json);
+
+        Assert.True(doc.RootElement.TryGetProperty("status", out JsonElement statusElement));
+        Assert.Equal(JsonValueKind.String, statusElement.ValueKind);
+        Assert.Equal("Pending", statusElement.GetString());
     }
 
     private async Task<Guid> CreateExpenseAsync()

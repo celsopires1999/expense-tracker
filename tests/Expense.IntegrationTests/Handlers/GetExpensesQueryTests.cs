@@ -94,7 +94,25 @@ public sealed class GetExpensesQueryTests : IClassFixture<ExpenseApiFixture>, IA
         Assert.Empty(result.Value);
     }
 
-    private async Task SeedExpensesAsync(int count, Guid? userId = null, Guid? categoryId = null)
+    [Fact]
+    public async Task GetExpenses_ShouldFilterByStatus()
+    {
+        await SeedExpensesAsync(2, status: ExpenseStatus.Pending);
+        await SeedExpensesAsync(1, status: ExpenseStatus.Approved);
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IQueryHandler<GetExpensesQuery, List<ExpenseResponse>> handler =
+            scope.ServiceProvider.GetRequiredService<IQueryHandler<GetExpensesQuery, List<ExpenseResponse>>>();
+
+        var query = new GetExpensesQuery { Status = ExpenseStatus.Pending };
+        Result<List<ExpenseResponse>> result = await handler.Handle(query, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Equal(2, result.Value.Count);
+        Assert.All(result.Value, e => Assert.Equal(ExpenseStatus.Pending, e.Status));
+    }
+
+    private async Task SeedExpensesAsync(int count, Guid? userId = null, Guid? categoryId = null, ExpenseStatus? status = null)
     {
         using IServiceScope scope = _factory.Services.CreateScope();
         IApplicationDbContext context = scope.ServiceProvider.GetRequiredService<IApplicationDbContext>();
@@ -110,6 +128,7 @@ public sealed class GetExpensesQueryTests : IClassFixture<ExpenseApiFixture>, IA
                 Date = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(-i)),
                 CategoryId = categoryId ?? ExpenseTestHelper.AlimentacaoCategoryId,
                 PaymentMethodId = ExpenseTestHelper.CreditoPaymentMethodId,
+                Status = status ?? ExpenseStatus.Pending,
                 CreatedAt = DateTime.UtcNow
             };
 

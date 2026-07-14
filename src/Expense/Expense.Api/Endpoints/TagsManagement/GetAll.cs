@@ -1,8 +1,8 @@
+using Expense.Api.Extensions;
+using Expense.Api.Infrastructure;
 using Expense.Application.Abstractions.Messaging;
 using Expense.Application.Tags.GetAll;
 using SharedKernel;
-using Expense.Api.Extensions;
-using Expense.Api.Infrastructure;
 
 namespace Expense.Api.Endpoints.TagsManagement;
 

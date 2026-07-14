@@ -96,6 +96,13 @@ public sealed class ExpenseApiFixture : IAsyncLifetime
 internal sealed class TestUserContext(Guid userId) : IUserContext
 {
     public Guid UserId => userId;
+
+    public string[] Roles => [];
+
+    public bool IsInRole(string role)
+    {
+        return false;
+    }
 }
 
 internal sealed class TestPermissionServiceClient : IPermissionServiceClient

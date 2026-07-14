@@ -17,4 +17,19 @@ internal sealed class UserContext(IHttpContextAccessor httpContextAccessor) : IU
             return Guid.TryParse(userIdValue, out Guid userId) ? userId : Guid.Empty;
         }
     }
+
+    public string[] Roles
+    {
+        get
+        {
+            ClaimsPrincipal? user = httpContextAccessor.HttpContext?.User;
+
+            return user?.FindAll(ClaimTypes.Role).Select(c => c.Value).ToArray() ?? [];
+        }
+    }
+
+    public bool IsInRole(string role)
+    {
+        return Roles.Contains(role, StringComparer.OrdinalIgnoreCase);
+    }
 }

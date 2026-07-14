@@ -56,6 +56,23 @@ internal sealed class UpdateExpenseCommandHandler(
         expense.PaymentMethodId = command.PaymentMethodId;
         expense.UpdatedAt = dateTimeProvider.UtcNow;
 
+        if (command.Status.HasValue)
+        {
+            if (!userContext.IsInRole("Admin"))
+            {
+                return Result.Failure(Error.Failure("Expenses.Forbidden", "Only Admin can change expense status"));
+            }
+
+            try
+            {
+                expense.ChangeStatus(command.Status.Value);
+            }
+            catch (InvalidOperationException ex)
+            {
+                return Result.Failure(Error.Failure("Expenses.InvalidStatusTransition", ex.Message));
+            }
+        }
+
         expense.Tags.Clear();
 
         if (command.TagIds.Count != 0)

@@ -1,9 +1,9 @@
+using Expense.Api.Extensions;
+using Expense.Api.Infrastructure;
 using Expense.Application.Abstractions.Authentication;
 using Expense.Application.Abstractions.Messaging;
 using Expense.Application.Expenses.Create;
 using SharedKernel;
-using Expense.Api.Extensions;
-using Expense.Api.Infrastructure;
 
 namespace Expense.Api.Endpoints.Expenses;
 
