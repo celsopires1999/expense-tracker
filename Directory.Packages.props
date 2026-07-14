@@ -32,7 +32,7 @@
     <PackageVersion Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <!-- MassTransit -->
     <PackageVersion Include="MassTransit" Version="8.4.1" />
-    <PackageVersion Include="MassTransit.Abstractions" Version="8.4.1" />
+    <PackageVersion Include="MassTransit.Abstractions" Version="9.1.2" />
     <PackageVersion Include="MassTransit.EntityFrameworkCore" Version="8.4.1" />
     <PackageVersion Include="MassTransit.RabbitMQ" Version="8.4.1" />
     <!-- Testing -->
