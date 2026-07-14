@@ -171,6 +171,21 @@ format:
 format-check:
     dotnet format {{solution}} --verify-no-changes
 
+# ──────────── SQL Migration Scripts ────────────
+
+# Generate initial SQL scripts for all databases (from existing migrations)
+generate-sql-init:
+    mkdir -p docker/migrations/{auth-db,permission-db,expense-db}
+    dotnet ef migrations script \
+      --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
+      --idempotent --output docker/migrations/auth-db/001-initial.sql
+    dotnet ef migrations script \
+      --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
+      --idempotent --output docker/migrations/permission-db/001-initial.sql
+    dotnet ef migrations script \
+      --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
+      --idempotent --output docker/migrations/expense-db/001-initial.sql
+
 # Clean all build artifacts
 clean:
     dotnet clean {{solution}}

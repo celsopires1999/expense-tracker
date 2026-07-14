@@ -1,0 +1,34 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "ExpenseTracker - auth-db",
+            "Group": "ExpenseTracker",
+            "Host": "postgres",
+            "Port": 5432,
+            "MaintenanceDB": "postgres",
+            "Username": "postgres",
+            "SSLMode": "prefer",
+            "Passfile": ""
+        },
+        "2": {
+            "Name": "ExpenseTracker - permission-db",
+            "Group": "ExpenseTracker",
+            "Host": "postgres",
+            "Port": 5432,
+            "MaintenanceDB": "postgres",
+            "Username": "postgres",
+            "SSLMode": "prefer",
+            "Passfile": ""
+        },
+        "3": {
+            "Name": "ExpenseTracker - expense-db",
+            "Group": "ExpenseTracker",
+            "Host": "postgres",
+            "Port": 5432,
+            "MaintenanceDB": "postgres",
+            "Username": "postgres",
+            "SSLMode": "prefer",
+            "Passfile": ""
+        }
+    }
+}
