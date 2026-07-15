@@ -181,18 +181,297 @@ format-check:
 
 # ──────────── SQL Migration Scripts ────────────
 
-# Generate initial SQL scripts for all databases (from existing migrations)
+# Generate SQL scripts mirroring EF migration files (up + down)
 generate-sql-init:
+    #!/usr/bin/env bash
+    set -euo pipefail
     mkdir -p docker/migrations/{auth-db,permission-db,expense-db}
-    dotnet ef migrations script \
-      --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
-      --idempotent --output docker/migrations/auth-db/001-initial.sql
-    dotnet ef migrations script \
-      --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
-      --idempotent --output docker/migrations/permission-db/001-initial.sql
-    dotnet ef migrations script \
-      --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
-      --idempotent --output docker/migrations/expense-db/001-initial.sql
+    contexts=(
+      "{{auth_migrations}}|{{auth_startup}}|{{auth_context}}|auth-db"
+      "{{perm_migrations}}|{{perm_startup}}|{{perm_context}}|permission-db"
+      "{{expense_migrations}}|{{expense_startup}}|{{expense_context}}|expense-db"
+    )
+    for ctx in "${contexts[@]}"; do
+      IFS='|' read -r project startup context db_dir <<< "$ctx"
+      prev=""
+      migrations=$(dotnet ef migrations list \
+        --project "$project" --startup-project "$startup" --context "$context" 2>/dev/null \
+        | grep -E '^[0-9]{14}_' | sed 's/ (Pending)$//')
+      while IFS= read -r migration; do
+        [ -z "$migration" ] && continue
+        if [ -z "$prev" ]; then
+          dotnet ef migrations script 0 "$migration" --idempotent \
+            --project "$project" --startup-project "$startup" --context "$context" \
+            --output "docker/migrations/${db_dir}/${migration}.sql"
+          dotnet ef migrations script "$migration" 0 --idempotent \
+            --project "$project" --startup-project "$startup" --context "$context" \
+            --output "docker/migrations/${db_dir}/${migration}_down.sql"
+        else
+          dotnet ef migrations script "$prev" "$migration" --idempotent \
+            --project "$project" --startup-project "$startup" --context "$context" \
+            --output "docker/migrations/${db_dir}/${migration}.sql"
+          dotnet ef migrations script "$migration" "$prev" --idempotent \
+            --project "$project" --startup-project "$startup" --context "$context" \
+            --output "docker/migrations/${db_dir}/${migration}_down.sql"
+        fi
+        echo "Generated: docker/migrations/${db_dir}/${migration}.sql + ${migration}_down.sql"
+        prev="$migration"
+      done <<< "$migrations"
+    done
+
+# Generate incremental SQL for a specific Auth migration
+# Usage: just generate-sql-auth <migration-name>
+generate-sql-auth name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target="{{name}}"
+    migrations=$(dotnet ef migrations list \
+      --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} 2>/dev/null \
+      | grep -E '^[0-9]{14}_' | sed 's/ (Pending)$//')
+    prev=""
+    found=false
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      if [ "$line" = "$target" ]; then
+        found=true
+        break
+      fi
+      prev="$line"
+    done <<< "$migrations"
+    if [ "$found" = false ]; then
+      echo "Error: Migration '$target' not found in {{auth_context}}"
+      echo "Available migrations:"
+      echo "$migrations"
+      exit 1
+    fi
+    if [ -z "$prev" ]; then
+      dotnet ef migrations script 0 "$target" --idempotent \
+        --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
+        --output "docker/migrations/auth-db/${target}.sql"
+      dotnet ef migrations script "$target" 0 --idempotent \
+        --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
+        --output "docker/migrations/auth-db/${target}_down.sql"
+    else
+      dotnet ef migrations script "$prev" "$target" --idempotent \
+        --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
+        --output "docker/migrations/auth-db/${target}.sql"
+      dotnet ef migrations script "$target" "$prev" --idempotent \
+        --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
+        --output "docker/migrations/auth-db/${target}_down.sql"
+    fi
+    echo "Generated: docker/migrations/auth-db/${target}.sql + ${target}_down.sql"
+
+# Generate incremental SQL for a specific Permission migration
+# Usage: just generate-sql-perm <migration-name>
+generate-sql-perm name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target="{{name}}"
+    migrations=$(dotnet ef migrations list \
+      --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} 2>/dev/null \
+      | grep -E '^[0-9]{14}_' | sed 's/ (Pending)$//')
+    prev=""
+    found=false
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      if [ "$line" = "$target" ]; then
+        found=true
+        break
+      fi
+      prev="$line"
+    done <<< "$migrations"
+    if [ "$found" = false ]; then
+      echo "Error: Migration '$target' not found in {{perm_context}}"
+      echo "Available migrations:"
+      echo "$migrations"
+      exit 1
+    fi
+    if [ -z "$prev" ]; then
+      dotnet ef migrations script 0 "$target" --idempotent \
+        --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
+        --output "docker/migrations/permission-db/${target}.sql"
+      dotnet ef migrations script "$target" 0 --idempotent \
+        --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
+        --output "docker/migrations/permission-db/${target}_down.sql"
+    else
+      dotnet ef migrations script "$prev" "$target" --idempotent \
+        --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
+        --output "docker/migrations/permission-db/${target}.sql"
+      dotnet ef migrations script "$target" "$prev" --idempotent \
+        --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
+        --output "docker/migrations/permission-db/${target}_down.sql"
+    fi
+    echo "Generated: docker/migrations/permission-db/${target}.sql + ${target}_down.sql"
+
+# Generate incremental SQL for a specific Expense migration
+# Usage: just generate-sql-expense <migration-name>
+generate-sql-expense name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target="{{name}}"
+    migrations=$(dotnet ef migrations list \
+      --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} 2>/dev/null \
+      | grep -E '^[0-9]{14}_' | sed 's/ (Pending)$//')
+    prev=""
+    found=false
+    while IFS= read -r line; do
+      [ -z "$line" ] && continue
+      if [ "$line" = "$target" ]; then
+        found=true
+        break
+      fi
+      prev="$line"
+    done <<< "$migrations"
+    if [ "$found" = false ]; then
+      echo "Error: Migration '$target' not found in {{expense_context}}"
+      echo "Available migrations:"
+      echo "$migrations"
+      exit 1
+    fi
+    if [ -z "$prev" ]; then
+      dotnet ef migrations script 0 "$target" --idempotent \
+        --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
+        --output "docker/migrations/expense-db/${target}.sql"
+      dotnet ef migrations script "$target" 0 --idempotent \
+        --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
+        --output "docker/migrations/expense-db/${target}_down.sql"
+    else
+      dotnet ef migrations script "$prev" "$target" --idempotent \
+        --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
+        --output "docker/migrations/expense-db/${target}.sql"
+      dotnet ef migrations script "$target" "$prev" --idempotent \
+        --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
+        --output "docker/migrations/expense-db/${target}_down.sql"
+    fi
+    echo "Generated: docker/migrations/expense-db/${target}.sql + ${target}_down.sql"
+
+# ──────────── SQL Rollback ────────────
+
+# Rollback a specific Auth migration via SQL
+# Usage: just rollback-sql-auth <migration-name>
+rollback-sql-auth name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target="{{name}}"
+    sql_files=$(ls docker/migrations/auth-db/*_down.sql 2>/dev/null | sort -r)
+    if [ -z "$sql_files" ]; then
+      echo "No rollback SQL files found in docker/migrations/auth-db/"
+      exit 1
+    fi
+    applied=$(PGPASSWORD=migration_pass psql -U migration_user -d auth-db -h localhost -t -A \
+      -c "SELECT migration_id FROM public.\"__EFMigrationsHistory\" ORDER BY migration_id;" 2>/dev/null || echo "")
+    if ! echo "$applied" | grep -q "^${target}$"; then
+      echo "Error: Migration '$target' is not applied to auth-db"
+      exit 1
+    fi
+    to_revert=()
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      mid=$(basename "$f" _down.sql)
+      if echo "$applied" | grep -q "^${mid}$"; then
+        to_revert+=("$mid")
+        if [ "$mid" = "$target" ]; then
+          break
+        fi
+      fi
+    done <<< "$sql_files"
+    if [ ${#to_revert[@]} -eq 0 ]; then
+      echo "Nothing to rollback for '$target' in auth-db"
+      exit 0
+    fi
+    echo "Rolling back auth-db: ${to_revert[*]}"
+    for mid in "${to_revert[@]}"; do
+      echo "Reverting $mid from auth-db"
+      PGPASSWORD=migration_pass psql -U migration_user -d auth-db -h localhost \
+        -v ON_ERROR_STOP=1 -f "docker/migrations/auth-db/${mid}_down.sql"
+      PGPASSWORD=migration_pass psql -U migration_user -d auth-db -h localhost \
+        -c "DELETE FROM public.\"__EFMigrationsHistory\" WHERE migration_id = '${mid}';"
+    done
+    echo "Rollback complete for auth-db"
+
+# Rollback a specific Permission migration via SQL
+# Usage: just rollback-sql-perm <migration-name>
+rollback-sql-perm name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target="{{name}}"
+    sql_files=$(ls docker/migrations/permission-db/*_down.sql 2>/dev/null | sort -r)
+    if [ -z "$sql_files" ]; then
+      echo "No rollback SQL files found in docker/migrations/permission-db/"
+      exit 1
+    fi
+    applied=$(PGPASSWORD=migration_pass psql -U migration_user -d permission-db -h localhost -t -A \
+      -c "SELECT migration_id FROM public.\"__EFMigrationsHistory\" ORDER BY migration_id;" 2>/dev/null || echo "")
+    if ! echo "$applied" | grep -q "^${target}$"; then
+      echo "Error: Migration '$target' is not applied to permission-db"
+      exit 1
+    fi
+    to_revert=()
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      mid=$(basename "$f" _down.sql)
+      if echo "$applied" | grep -q "^${mid}$"; then
+        to_revert+=("$mid")
+        if [ "$mid" = "$target" ]; then
+          break
+        fi
+      fi
+    done <<< "$sql_files"
+    if [ ${#to_revert[@]} -eq 0 ]; then
+      echo "Nothing to rollback for '$target' in permission-db"
+      exit 0
+    fi
+    echo "Rolling back permission-db: ${to_revert[*]}"
+    for mid in "${to_revert[@]}"; do
+      echo "Reverting $mid from permission-db"
+      PGPASSWORD=migration_pass psql -U migration_user -d permission-db -h localhost \
+        -v ON_ERROR_STOP=1 -f "docker/migrations/permission-db/${mid}_down.sql"
+      PGPASSWORD=migration_pass psql -U migration_user -d permission-db -h localhost \
+        -c "DELETE FROM public.\"__EFMigrationsHistory\" WHERE migration_id = '${mid}';"
+    done
+    echo "Rollback complete for permission-db"
+
+# Rollback a specific Expense migration via SQL
+# Usage: just rollback-sql-expense <migration-name>
+rollback-sql-expense name:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    target="{{name}}"
+    sql_files=$(ls docker/migrations/expense-db/*_down.sql 2>/dev/null | sort -r)
+    if [ -z "$sql_files" ]; then
+      echo "No rollback SQL files found in docker/migrations/expense-db/"
+      exit 1
+    fi
+    applied=$(PGPASSWORD=migration_pass psql -U migration_user -d expense-db -h localhost -t -A \
+      -c "SELECT migration_id FROM public.\"__EFMigrationsHistory\" ORDER BY migration_id;" 2>/dev/null || echo "")
+    if ! echo "$applied" | grep -q "^${target}$"; then
+      echo "Error: Migration '$target' is not applied to expense-db"
+      exit 1
+    fi
+    to_revert=()
+    while IFS= read -r f; do
+      [ -z "$f" ] && continue
+      mid=$(basename "$f" _down.sql)
+      if echo "$applied" | grep -q "^${mid}$"; then
+        to_revert+=("$mid")
+        if [ "$mid" = "$target" ]; then
+          break
+        fi
+      fi
+    done <<< "$sql_files"
+    if [ ${#to_revert[@]} -eq 0 ]; then
+      echo "Nothing to rollback for '$target' in expense-db"
+      exit 0
+    fi
+    echo "Rolling back expense-db: ${to_revert[*]}"
+    for mid in "${to_revert[@]}"; do
+      echo "Reverting $mid from expense-db"
+      PGPASSWORD=migration_pass psql -U migration_user -d expense-db -h localhost \
+        -v ON_ERROR_STOP=1 -f "docker/migrations/expense-db/${mid}_down.sql"
+      PGPASSWORD=migration_pass psql -U migration_user -d expense-db -h localhost \
+        -c "DELETE FROM public.\"__EFMigrationsHistory\" WHERE migration_id = '${mid}';"
+    done
+    echo "Rollback complete for expense-db"
 
 # Clean all build artifacts
 clean:

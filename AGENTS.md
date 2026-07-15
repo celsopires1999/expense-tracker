@@ -82,6 +82,11 @@ $DC just watch-auth / watch-perm / watch-expense
 $DC just add-migration-auth "Name" / add-migration-perm "Name" / add-migration-expense "Name" / add-migration-all "Name"
 $DC just migrate-auth / migrate-perm / migrate-expense / migrate-all
 $DC just rollback-auth / rollback-perm / rollback-expense
+$DC just rollback-to-auth <migration> / rollback-to-perm <migration> / rollback-to-expense <migration>
+$DC just generate-sql-init                    # generate all SQL scripts (up + down) for all contexts
+$DC just generate-sql-auth <timestamp>        # generate SQL for a specific auth migration
+$DC just generate-sql-perm <timestamp>        # generate SQL for a specific permission migration
+$DC just generate-sql-expense <timestamp>     # generate SQL for a specific expense migration
 $DC just reset-db
 $DC just format / format-check
 $DC just clean
@@ -118,3 +123,4 @@ Connection strings use `host.docker.internal` for reaching the host from contain
 - `.editorconfig` is 424 lines with strict CA/IDE/Sonar rules — many disabled intentionally
 - `justfile` with ~30 recipes for per-context operations — run via `$DC just <recipe>`, or `$DC just --list` to see all available recipes
 - `manual-tests/` with `api.http` and `full_test.sh` E2E script
+- SQL migration pipeline: generate up/down scripts from EF Core migrations for sandbox/production use, with idempotent application and rollback support

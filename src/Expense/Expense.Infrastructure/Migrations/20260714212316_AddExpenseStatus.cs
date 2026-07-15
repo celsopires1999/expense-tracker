@@ -19,7 +19,7 @@ namespace Expense.Infrastructure.Migrations
                 nullable: false,
                 defaultValue: "Pending");
 
-            migrationBuilder.Sql("UPDATE expenses SET status = 'Paid'");
+            migrationBuilder.Sql("UPDATE expenses SET status = 'Paid';");
         }
 
         /// <inheritdoc />

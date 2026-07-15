@@ -231,6 +231,73 @@ just build
 just api-expense   # runs Expense.Api on port 5000
 ```
 
+## SQL Migrations (sandbox/production)
+
+The project supports two migration approaches. Run these commands inside the app container:
+
+```bash
+# Open a shell in the app container
+docker compose exec -u developer -w /workspace app sh
+```
+
+### Development (EF Core)
+
+```bash
+# Add migration
+just add-migration-expense "AddExpenseStatus"
+
+# Apply migrations
+just migrate-expense
+
+# Rollback to previous
+just rollback-expense
+
+# Rollback to specific migration
+just rollback-to-expense 20260710015922_AddOutboxTables
+```
+
+### Sandbox/Production (SQL scripts)
+
+Generate SQL scripts that mirror EF Core migrations, suitable for DBA review and manual application:
+
+```bash
+# Generate all SQL scripts (up + down) for all contexts
+just generate-sql-init
+
+# Generate for a specific context
+just generate-sql-expense 20260714212316_AddExpenseStatus
+```
+
+**Output structure:**
+```
+docker/migrations/expense-db/
+├── 20260710014742_InitialCreate.sql          ← up
+├── 20260710014742_InitialCreate_down.sql     ← down
+├── 20260710015922_AddOutboxTables.sql        ← up
+├── 20260710015922_AddOutboxTables_down.sql   ← down
+├── 20260714212316_AddExpenseStatus.sql       ← up
+└── 20260714212316_AddExpenseStatus_down.sql  ← down
+```
+
+**Apply migrations (sandbox):**
+```bash
+# Apply all pending migrations
+docker compose -f docker-compose.sandbox.yml run --rm migrations
+
+# Rollback specific migration
+docker compose -f docker-compose.sandbox.yml run --rm \
+  -e PGPASSWORD=migration_pass \
+  --entrypoint "bash /run-rollback.sh expense-db 20260714212316_AddExpenseStatus" \
+  migrations
+```
+
+**Key features:**
+- Idempotent scripts (safe to re-run)
+- Automatic skip of already-applied migrations
+- `ON_ERROR_STOP=1` halts on first error
+- Rollback scripts generated alongside up scripts
+- `__EFMigrationsHistory` tracking for both approaches
+
 ## Useful commands
 
 ```bash
@@ -251,6 +318,10 @@ dotnet clean ExpenseTracker.slnx
 
 # List all justfile recipes
 just --list
+
+# SQL migrations
+just generate-sql-init                  # Generate all SQL scripts
+just generate-sql-expense <timestamp>   # Generate SQL for specific migration
 ```
 
 ## Seed roles

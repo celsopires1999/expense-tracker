@@ -27,6 +27,7 @@ services:
       PGPASSWORD: migration_pass
     volumes:
       - ./docker/migrations/run-migrations.sh:/run-migrations.sh:ro
+      - ./docker/migrations/run-rollback.sh:/run-rollback.sh:ro
       - ./docker/migrations:/migrations:ro
     entrypoint: ["bash", "/run-migrations.sh"]
     depends_on:
