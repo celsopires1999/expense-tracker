@@ -334,7 +334,7 @@ rollback-all: rollback-auth rollback-perm rollback-expense
 
 # ──────────── Database initialization ────────────
 
-# Create databases, migration_user and grant permissions (development)
+# Create databases, users and grant permissions (development)
 init-db:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -347,6 +347,12 @@ init-db:
     echo "Creating migration_user..."
     $PG -tc "SELECT 1 FROM pg_roles WHERE rolname = 'migration_user'" | grep -q 1 || \
       $PG -c "CREATE USER migration_user WITH PASSWORD 'migration_pass'; ALTER USER migration_user CREATEDB;"
+    echo "Creating application users..."
+    for pair in "auth_app:auth_app_pass" "perm_app:perm_app_pass" "expense_app:expense_app_pass"; do
+      user="${pair%%:*}"; pass="${pair#*:}"
+      $PG -tc "SELECT 1 FROM pg_roles WHERE rolname = '${user}'" | grep -q 1 || \
+        $PG -c "CREATE USER ${user} WITH PASSWORD '${pass}';"
+    done
     echo "Granting permissions to migration_user..."
     for db in auth-db permission-db expense-db; do
       $PG -d "$db" -c \
@@ -356,6 +362,28 @@ init-db:
          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO migration_user;
          ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO migration_user;"
     done
+    echo "Granting DML permissions to application users..."
+    $PG -d "auth-db" -c \
+      "GRANT CONNECT ON DATABASE \"auth-db\" TO auth_app;
+       GRANT USAGE ON SCHEMA public TO auth_app;
+       GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO auth_app;
+       GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO auth_app;
+       ALTER DEFAULT PRIVILEGES FOR USER migration_user IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO auth_app;
+       ALTER DEFAULT PRIVILEGES FOR USER migration_user IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO auth_app;"
+    $PG -d "permission-db" -c \
+      "GRANT CONNECT ON DATABASE \"permission-db\" TO perm_app;
+       GRANT USAGE ON SCHEMA public TO perm_app;
+       GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO perm_app;
+       GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO perm_app;
+       ALTER DEFAULT PRIVILEGES FOR USER migration_user IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO perm_app;
+       ALTER DEFAULT PRIVILEGES FOR USER migration_user IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO perm_app;"
+    $PG -d "expense-db" -c \
+      "GRANT CONNECT ON DATABASE \"expense-db\" TO expense_app;
+       GRANT USAGE ON SCHEMA public TO expense_app;
+       GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO expense_app;
+       GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO expense_app;
+       ALTER DEFAULT PRIVILEGES FOR USER migration_user IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO expense_app;
+       ALTER DEFAULT PRIVILEGES FOR USER migration_user IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO expense_app;"
     echo "Database initialization complete."
 
 # ──────────── Database reset ────────────
