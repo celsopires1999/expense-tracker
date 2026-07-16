@@ -73,6 +73,7 @@ $DC dotnet ef migrations add <Name> --project src/Auth/Auth.Infrastructure --sta
 # Same pattern for Permission (PermissionDbContext) and Expense (ApplicationDbContext)
 
 # ── Apply migrations (Liquibase — via justfile) ──
+$DC just init-db                                       # create databases + migration_user (idempotent)
 $DC just migrate-auth / migrate-perm / migrate-expense / migrate-all
 
 # ── Justfile recipes (run inside app container) ──
@@ -126,4 +127,4 @@ Connection strings use `host.docker.internal` for reaching the host from contain
 - `.editorconfig` is 424 lines with strict CA/IDE/Sonar rules — many disabled intentionally
 - `justfile` with ~30 recipes for per-context operations — run via `$DC just <recipe>`, or `$DC just --list` to see all available recipes
 - `manual-tests/` with `api.http` and `full_test.sh` E2E script
-- Liquibase for sandbox/production migration application (EF Core migrations remain the source of truth for authoring)
+- Liquibase for development/sandbox migration application (EF Core migrations remain the source of truth for authoring)

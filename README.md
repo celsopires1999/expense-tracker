@@ -79,10 +79,10 @@ docker compose up -d
 ### 3. Create databases
 
 ```bash
-docker compose exec postgres psql -U postgres -c "CREATE DATABASE \"auth-db\";"
-docker compose exec postgres psql -U postgres -c "CREATE DATABASE \"permission-db\";"
-docker compose exec postgres psql -U postgres -c "CREATE DATABASE \"expense-db\";"
+just init-db
 ```
+
+This creates the databases (`auth-db`, `permission-db`, `expense-db`), the `migration_user`, and grants the necessary permissions. Safe to run multiple times (idempotent).
 
 ### 4. Apply migrations
 
@@ -235,7 +235,7 @@ just build
 just api-expense   # runs Expense.Api on port 5000
 ```
 
-## Migrations (Liquibase)
+## Migrations
 
 Schema migrations are authored with EF Core (`dotnet ef migrations add`) and applied via Liquibase. Run these commands inside the app container:
 
@@ -250,7 +250,7 @@ docker compose exec -u developer -w /workspace app sh
 # Add a new migration (creates EF Core C# class + Liquibase changeset XML)
 just add-migration-expense "AddExpenseStatus"
 
-# Generate SQL from EF Core migrations (required before applying)
+# Generate SQL from EF Core migrations (required for Liquibase)
 just generate-sql-expense 20260714212316_AddExpenseStatus
 
 # Apply migrations (via Liquibase)

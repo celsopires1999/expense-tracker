@@ -6,6 +6,9 @@
 # Databases: auth-db, permission-db, expense-db (PostgreSQL :5432)
 # Log viewer: Seq → http://localhost:8082
 
+# Host workspace path (resolves /workspace → host path for Docker-in-Docker volume mounts)
+host_workspace := `docker inspect $(hostname) --format '{{range .Mounts}}{{if eq .Destination "/workspace"}}{{.Source}}{{end}}{{end}}'`
+
 auth_migrations  := "src/Auth/Auth.Infrastructure"
 auth_startup     := "src/Auth/Auth.Api"
 auth_context     := "AuthDbContext"
@@ -113,8 +116,8 @@ add-migration-auth name:
 
 migrate-auth:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         update \
@@ -125,8 +128,8 @@ migrate-auth:
 
 rollback-auth:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         rollback-count \
@@ -138,8 +141,8 @@ rollback-auth:
 
 rollback-to-auth name:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         rollback \
@@ -151,8 +154,8 @@ rollback-to-auth name:
 
 list-migrations-auth:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         status \
@@ -190,8 +193,8 @@ add-migration-perm name:
 
 migrate-perm:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         update \
@@ -202,8 +205,8 @@ migrate-perm:
 
 rollback-perm:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         rollback-count \
@@ -215,8 +218,8 @@ rollback-perm:
 
 rollback-to-perm name:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         rollback \
@@ -228,8 +231,8 @@ rollback-to-perm name:
 
 list-migrations-perm:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         status \
@@ -267,8 +270,8 @@ add-migration-expense name:
 
 migrate-expense:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         update \
@@ -279,8 +282,8 @@ migrate-expense:
 
 rollback-expense:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         rollback-count \
@@ -292,8 +295,8 @@ rollback-expense:
 
 rollback-to-expense name:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         rollback \
@@ -305,8 +308,8 @@ rollback-to-expense name:
 
 list-migrations-expense:
     docker run --rm --network host \
-      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+      -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
       expense-tracker-migrations bash -c "liquibase \
         --search-path='/liquibase/custom,/liquibase/sql' \
         status \
@@ -329,6 +332,32 @@ migrate-all: migrate-auth migrate-perm migrate-expense
 # Rollback all databases
 rollback-all: rollback-auth rollback-perm rollback-expense
 
+# ──────────── Database initialization ────────────
+
+# Create databases, migration_user and grant permissions (development)
+init-db:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PG="docker exec postgres psql -U postgres"
+    echo "Creating databases..."
+    for db in auth-db permission-db expense-db; do
+      $PG -tc "SELECT 1 FROM pg_database WHERE datname = '${db}'" | grep -q 1 || \
+        $PG -c "CREATE DATABASE \"${db}\";"
+    done
+    echo "Creating migration_user..."
+    $PG -tc "SELECT 1 FROM pg_roles WHERE rolname = 'migration_user'" | grep -q 1 || \
+      $PG -c "CREATE USER migration_user WITH PASSWORD 'migration_pass'; ALTER USER migration_user CREATEDB;"
+    echo "Granting permissions to migration_user..."
+    for db in auth-db permission-db expense-db; do
+      $PG -d "$db" -c \
+        "GRANT ALL ON SCHEMA public TO migration_user;
+         GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO migration_user;
+         GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO migration_user;
+         ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO migration_user;
+         ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO migration_user;"
+    done
+    echo "Database initialization complete."
+
 # ──────────── Database reset ────────────
 
 # Drop all tables and re-apply all migrations (clears all data)
@@ -338,12 +367,10 @@ reset-db:
     for db in auth-db permission-db expense-db; do
       echo "Dropping and re-applying $db..."
       docker run --rm --network host \
-        -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
-        -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+        -v "{{host_workspace}}/docker/liquibase:/liquibase/custom:ro" \
+        -v "{{host_workspace}}/docker/migrations:/liquibase/sql:ro" \
         expense-tracker-migrations bash -c "liquibase \
-          --search-path='/liquibase/custom,/liquibase/sql' \
           drop-all \
-          --changelog-file='${db}/changelog.xml' \
           --url='jdbc:postgresql://localhost:5432/${db}' \
           --username=migration_user \
           --password=migration_pass && \
