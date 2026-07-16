@@ -19,17 +19,15 @@ services:
       retries: 10
       start_period: 10s
 
-  # ── Migrations (ephemeral — runs once and dies) ──
+  # ── Migrations (ephemeral — runs Liquibase and dies) ──
   migrations:
-    image: postgres:17
+    build:
+      context: ./docker/liquibase
     container_name: sandbox-migrations
-    environment:
-      PGPASSWORD: migration_pass
     volumes:
-      - ./docker/migrations/run-migrations.sh:/run-migrations.sh:ro
-      - ./docker/migrations/run-rollback.sh:/run-rollback.sh:ro
-      - ./docker/migrations:/migrations:ro
-    entrypoint: ["bash", "/run-migrations.sh"]
+      - ./docker/liquibase:/liquibase/custom:ro
+      - ./docker/migrations:/liquibase/sql:ro
+    entrypoint: ["bash", "/liquibase/custom/run-liquibase.sh"]
     depends_on:
       postgres:
         condition: service_healthy

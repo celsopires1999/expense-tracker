@@ -87,9 +87,13 @@ docker compose exec postgres psql -U postgres -c "CREATE DATABASE \"expense-db\"
 ### 4. Apply migrations
 
 ```bash
-dotnet ef database update --project src/Auth/Auth.Infrastructure --startup-project src/Auth/Auth.Api --context AuthDbContext
-dotnet ef database update --project src/Permission/Permission.Infrastructure --startup-project src/Permission/Permission.Api --context PermissionDbContext
-dotnet ef database update --project src/Expense/Expense.Infrastructure --startup-project src/Expense/Expense.Api --context ApplicationDbContext
+# Development: apply via justfile (uses Liquibase)
+just migrate-auth
+just migrate-perm
+just migrate-expense
+
+# Or apply all at once
+just migrate-all
 ```
 
 ### 5. Run all services
@@ -231,72 +235,71 @@ just build
 just api-expense   # runs Expense.Api on port 5000
 ```
 
-## SQL Migrations (sandbox/production)
+## Migrations (Liquibase)
 
-The project supports two migration approaches. Run these commands inside the app container:
+Schema migrations are authored with EF Core (`dotnet ef migrations add`) and applied via Liquibase. Run these commands inside the app container:
 
 ```bash
 # Open a shell in the app container
 docker compose exec -u developer -w /workspace app sh
 ```
 
-### Development (EF Core)
+### Development workflow
 
 ```bash
-# Add migration
+# Add a new migration (creates EF Core C# class + Liquibase changeset XML)
 just add-migration-expense "AddExpenseStatus"
 
-# Apply migrations
+# Generate SQL from EF Core migrations (required before applying)
+just generate-sql-expense 20260714212316_AddExpenseStatus
+
+# Apply migrations (via Liquibase)
 just migrate-expense
 
-# Rollback to previous
+# Rollback last changeset
 just rollback-expense
 
-# Rollback to specific migration
+# Rollback to specific changeset
 just rollback-to-expense 20260710015922_AddOutboxTables
+
+# Check migration status
+just list-migrations-expense
 ```
 
-### Sandbox/Production (SQL scripts)
+### Sandbox/Production
 
-Generate SQL scripts that mirror EF Core migrations, suitable for DBA review and manual application:
+The sandbox environment (`docker-compose.sandbox.yml`) uses a Liquibase container that applies all pending changesets on startup:
 
 ```bash
-# Generate all SQL scripts (up + down) for all contexts
-just generate-sql-init
+# Start sandbox (Liquibase runs automatically before APIs)
+docker compose -f docker-compose.sandbox.yml up
 
-# Generate for a specific context
-just generate-sql-expense 20260714212316_AddExpenseStatus
+# Or run migrations standalone
+docker compose -f docker-compose.sandbox.yml up migrations
 ```
 
-**Output structure:**
-```
-docker/migrations/expense-db/
-├── 20260710014742_InitialCreate.sql          ← up
-├── 20260710014742_InitialCreate_down.sql     ← down
-├── 20260710015922_AddOutboxTables.sql        ← up
-├── 20260710015922_AddOutboxTables_down.sql   ← down
-├── 20260714212316_AddExpenseStatus.sql       ← up
-└── 20260714212316_AddExpenseStatus_down.sql  ← down
-```
+### Changelog structure
 
-**Apply migrations (sandbox):**
-```bash
-# Apply all pending migrations
-docker compose -f docker-compose.sandbox.yml run --rm migrations
-
-# Rollback specific migration
-docker compose -f docker-compose.sandbox.yml run --rm \
-  -e PGPASSWORD=migration_pass \
-  --entrypoint "bash /run-rollback.sh expense-db 20260714212316_AddExpenseStatus" \
-  migrations
+```
+docker/liquibase/
+├── auth-db/
+│   ├── changelog.xml                    ← master changelog
+│   └── changesets/
+│       ├── 001-initial-create.xml       ← references EF-generated SQL
+│       └── 002-add-outbox-tables.xml
+├── permission-db/
+│   ├── changelog.xml
+│   └── changesets/...
+└── expense-db/
+    ├── changelog.xml
+    └── changesets/...
 ```
 
-**Key features:**
-- Idempotent scripts (safe to re-run)
-- Automatic skip of already-applied migrations
-- `ON_ERROR_STOP=1` halts on first error
-- Rollback scripts generated alongside up scripts
-- `__EFMigrationsHistory` tracking for both approaches
+**Key points:**
+- EF Core migrations remain the source of truth for schema authoring
+- Liquibase tracks applied changesets via `DATABASECHANGELOG` table (replaces `__EFMigrationsHistory` in sandbox)
+- `000-init.sh` handles database/user creation via PostgreSQL `docker-entrypoint-initdb.d`
+- Integration tests continue using `MigrateAsync()` / `EnsureCreatedAsync()` via EF Core directly
 
 ## Useful commands
 
@@ -319,9 +322,12 @@ dotnet clean ExpenseTracker.slnx
 # List all justfile recipes
 just --list
 
-# SQL migrations
-just generate-sql-init                  # Generate all SQL scripts
-just generate-sql-expense <timestamp>   # Generate SQL for specific migration
+# Migrations
+just add-migration-expense "Name"   # Add new migration
+just generate-sql-expense <ts>      # Generate SQL from EF Core
+just migrate-expense                # Apply via Liquibase
+just rollback-expense               # Rollback last changeset
+just list-migrations-expense        # Check status
 ```
 
 ## Seed roles

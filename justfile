@@ -87,87 +87,274 @@ watch-expense:
 # ──────────── Migrations — Auth ────────────
 
 add-migration-auth name:
+    #!/usr/bin/env bash
+    set -euo pipefail
     dotnet ef migrations add {{name}} --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}}
+    TIMESTAMP=$(dotnet ef migrations list --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} 2>/dev/null \
+      | grep -E '^[0-9]{14}_' | tail -1 | sed 's/ (Pending)$//')
+    cat > docker/liquibase/auth-db/changesets/${TIMESTAMP}.xml <<EOF
+    <?xml version="1.0" encoding="UTF-8"?>
+    <databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+        <changeSet id="${TIMESTAMP}" author="developer">
+            <sqlFile path="auth-db/${TIMESTAMP}.sql" />
+            <rollback>
+                <sqlFile path="auth-db/${TIMESTAMP}_down.sql" />
+            </rollback>
+        </changeSet>
+    </databaseChangeLog>
+    EOF
+    sed -i '/<\/databaseChangeLog>/i \    <include file="auth-db/changesets/'${TIMESTAMP}'.xml" />' docker/liquibase/auth-db/changelog.xml
+    echo "Created changeset: docker/liquibase/auth-db/changesets/${TIMESTAMP}.xml"
+    echo "NOTE: Run 'just generate-sql-auth ${TIMESTAMP}' to generate the SQL file, then re-run this recipe if SQL doesn't exist yet."
 
 migrate-auth:
-    dotnet ef database update --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        update \
+        --changelog-file='auth-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/auth-db' \
+        --username=migration_user \
+        --password=migration_pass"
 
 rollback-auth:
-    dotnet ef database update 0 --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        rollback-count \
+        --changelog-file='auth-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/auth-db' \
+        --username=migration_user \
+        --password=migration_pass \
+        --count=1"
 
 rollback-to-auth name:
-    dotnet ef database update {{name}} --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}}
-
-remove-migration-auth:
-    dotnet ef migrations remove --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        rollback \
+        --changelog-file='auth-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/auth-db' \
+        --username=migration_user \
+        --password=migration_pass \
+        --tag={{name}}"
 
 list-migrations-auth:
-    dotnet ef migrations list --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        status \
+        --changelog-file='auth-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/auth-db' \
+        --username=migration_user \
+        --password=migration_pass"
 
 # ──────────── Migrations — Permission ────────────
 
 add-migration-perm name:
+    #!/usr/bin/env bash
+    set -euo pipefail
     dotnet ef migrations add {{name}} --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}}
+    TIMESTAMP=$(dotnet ef migrations list --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} 2>/dev/null \
+      | grep -E '^[0-9]{14}_' | tail -1 | sed 's/ (Pending)$//')
+    cat > docker/liquibase/permission-db/changesets/${TIMESTAMP}.xml <<EOF
+    <?xml version="1.0" encoding="UTF-8"?>
+    <databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+        <changeSet id="${TIMESTAMP}" author="developer">
+            <sqlFile path="permission-db/${TIMESTAMP}.sql" />
+            <rollback>
+                <sqlFile path="permission-db/${TIMESTAMP}_down.sql" />
+            </rollback>
+        </changeSet>
+    </databaseChangeLog>
+    EOF
+    sed -i '/<\/databaseChangeLog>/i \    <include file="permission-db/changesets/'${TIMESTAMP}'.xml" />' docker/liquibase/permission-db/changelog.xml
+    echo "Created changeset: docker/liquibase/permission-db/changesets/${TIMESTAMP}.xml"
+    echo "NOTE: Run 'just generate-sql-perm ${TIMESTAMP}' to generate the SQL file, then re-run this recipe if SQL doesn't exist yet."
 
 migrate-perm:
-    dotnet ef database update --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        update \
+        --changelog-file='permission-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/permission-db' \
+        --username=migration_user \
+        --password=migration_pass"
 
 rollback-perm:
-    dotnet ef database update 0 --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        rollback-count \
+        --changelog-file='permission-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/permission-db' \
+        --username=migration_user \
+        --password=migration_pass \
+        --count=1"
 
 rollback-to-perm name:
-    dotnet ef database update {{name}} --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}}
-
-remove-migration-perm:
-    dotnet ef migrations remove --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        rollback \
+        --changelog-file='permission-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/permission-db' \
+        --username=migration_user \
+        --password=migration_pass \
+        --tag={{name}}"
 
 list-migrations-perm:
-    dotnet ef migrations list --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        status \
+        --changelog-file='permission-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/permission-db' \
+        --username=migration_user \
+        --password=migration_pass"
 
 # ──────────── Migrations — Expense ────────────
 
 add-migration-expense name:
+    #!/usr/bin/env bash
+    set -euo pipefail
     dotnet ef migrations add {{name}} --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}}
+    TIMESTAMP=$(dotnet ef migrations list --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} 2>/dev/null \
+      | grep -E '^[0-9]{14}_' | tail -1 | sed 's/ (Pending)$//')
+    cat > docker/liquibase/expense-db/changesets/${TIMESTAMP}.xml <<EOF
+    <?xml version="1.0" encoding="UTF-8"?>
+    <databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+            http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+        <changeSet id="${TIMESTAMP}" author="developer">
+            <sqlFile path="expense-db/${TIMESTAMP}.sql" />
+            <rollback>
+                <sqlFile path="expense-db/${TIMESTAMP}_down.sql" />
+            </rollback>
+        </changeSet>
+    </databaseChangeLog>
+    EOF
+    sed -i '/<\/databaseChangeLog>/i \    <include file="expense-db/changesets/'${TIMESTAMP}'.xml" />' docker/liquibase/expense-db/changelog.xml
+    echo "Created changeset: docker/liquibase/expense-db/changesets/${TIMESTAMP}.xml"
+    echo "NOTE: Run 'just generate-sql-expense ${TIMESTAMP}' to generate the SQL file, then re-run this recipe if SQL doesn't exist yet."
 
 migrate-expense:
-    dotnet ef database update --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        update \
+        --changelog-file='expense-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/expense-db' \
+        --username=migration_user \
+        --password=migration_pass"
 
 rollback-expense:
-    dotnet ef database update 0 --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        rollback-count \
+        --changelog-file='expense-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/expense-db' \
+        --username=migration_user \
+        --password=migration_pass \
+        --count=1"
 
 rollback-to-expense name:
-    dotnet ef database update {{name}} --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}}
-
-remove-migration-expense:
-    dotnet ef migrations remove --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        rollback \
+        --changelog-file='expense-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/expense-db' \
+        --username=migration_user \
+        --password=migration_pass \
+        --tag={{name}}"
 
 list-migrations-expense:
-    dotnet ef migrations list --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}}
+    docker run --rm --network host \
+      -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+      -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+      expense-tracker-migrations bash -c "liquibase \
+        --search-path='/liquibase/custom,/liquibase/sql' \
+        status \
+        --changelog-file='expense-db/changelog.xml' \
+        --url='jdbc:postgresql://localhost:5432/expense-db' \
+        --username=migration_user \
+        --password=migration_pass"
 
 # ──────────── Migrations — All services ────────────
 
 # Add a migration with the same name to all 3 services
 add-migration-all name:
-    dotnet ef migrations add {{name}} --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}}
-    dotnet ef migrations add {{name}} --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}}
-    dotnet ef migrations add {{name}} --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}}
+    just add-migration-auth {{name}}
+    just add-migration-perm {{name}}
+    just add-migration-expense {{name}}
 
 # Apply pending migrations on all databases
 migrate-all: migrate-auth migrate-perm migrate-expense
 
-# Rollback all databases to initial state
+# Rollback all databases
 rollback-all: rollback-auth rollback-perm rollback-expense
 
 # ──────────── Database reset ────────────
 
-# Rollback all migrations, then re-apply them (clears all data)
+# Drop all tables and re-apply all migrations (clears all data)
 reset-db:
-    dotnet ef database update 0 --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}}
-    dotnet ef database update 0 --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}}
-    dotnet ef database update 0 --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}}
-    dotnet ef database update --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}}
-    dotnet ef database update --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}}
-    dotnet ef database update --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}}
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for db in auth-db permission-db expense-db; do
+      echo "Dropping and re-applying $db..."
+      docker run --rm --network host \
+        -v "$(pwd)/docker/liquibase:/liquibase/custom:ro" \
+        -v "$(pwd)/docker/migrations:/liquibase/sql:ro" \
+        expense-tracker-migrations bash -c "liquibase \
+          --search-path='/liquibase/custom,/liquibase/sql' \
+          drop-all \
+          --changelog-file='${db}/changelog.xml' \
+          --url='jdbc:postgresql://localhost:5432/${db}' \
+          --username=migration_user \
+          --password=migration_pass && \
+        liquibase \
+          --search-path='/liquibase/custom,/liquibase/sql' \
+          update \
+          --changelog-file='${db}/changelog.xml' \
+          --url='jdbc:postgresql://localhost:5432/${db}' \
+          --username=migration_user \
+          --password=migration_pass"
+    done
 
 # ──────────── Code Quality ────────────
 
@@ -179,9 +366,9 @@ format:
 format-check:
     dotnet format {{solution}} --verify-no-changes
 
-# ──────────── SQL Migration Scripts ────────────
+# ──────────── SQL Generation (for Liquibase changesets) ────────────
 
-# Generate SQL scripts mirroring EF migration files (up + down)
+# Generate SQL scripts for all contexts (run after add-migration-*)
 generate-sql-init:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -200,17 +387,17 @@ generate-sql-init:
       while IFS= read -r migration; do
         [ -z "$migration" ] && continue
         if [ -z "$prev" ]; then
-          dotnet ef migrations script 0 "$migration" --idempotent \
+          dotnet ef migrations script 0 "$migration" --no-transactions \
             --project "$project" --startup-project "$startup" --context "$context" \
             --output "docker/migrations/${db_dir}/${migration}.sql"
-          dotnet ef migrations script "$migration" 0 --idempotent \
+          dotnet ef migrations script "$migration" 0 --no-transactions \
             --project "$project" --startup-project "$startup" --context "$context" \
             --output "docker/migrations/${db_dir}/${migration}_down.sql"
         else
-          dotnet ef migrations script "$prev" "$migration" --idempotent \
+          dotnet ef migrations script "$prev" "$migration" --no-transactions \
             --project "$project" --startup-project "$startup" --context "$context" \
             --output "docker/migrations/${db_dir}/${migration}.sql"
-          dotnet ef migrations script "$migration" "$prev" --idempotent \
+          dotnet ef migrations script "$migration" "$prev" --no-transactions \
             --project "$project" --startup-project "$startup" --context "$context" \
             --output "docker/migrations/${db_dir}/${migration}_down.sql"
         fi
@@ -219,8 +406,7 @@ generate-sql-init:
       done <<< "$migrations"
     done
 
-# Generate incremental SQL for a specific Auth migration
-# Usage: just generate-sql-auth <migration-name>
+# Generate SQL for a specific Auth migration
 generate-sql-auth name:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -232,37 +418,28 @@ generate-sql-auth name:
     found=false
     while IFS= read -r line; do
       [ -z "$line" ] && continue
-      if [ "$line" = "$target" ]; then
-        found=true
-        break
-      fi
+      if [ "$line" = "$target" ]; then found=true; break; fi
       prev="$line"
     done <<< "$migrations"
-    if [ "$found" = false ]; then
-      echo "Error: Migration '$target' not found in {{auth_context}}"
-      echo "Available migrations:"
-      echo "$migrations"
-      exit 1
-    fi
+    if [ "$found" = false ]; then echo "Error: Migration '$target' not found"; exit 1; fi
     if [ -z "$prev" ]; then
-      dotnet ef migrations script 0 "$target" --idempotent \
+      dotnet ef migrations script 0 "$target" --no-transactions \
         --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
         --output "docker/migrations/auth-db/${target}.sql"
-      dotnet ef migrations script "$target" 0 --idempotent \
+      dotnet ef migrations script "$target" 0 --no-transactions \
         --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
         --output "docker/migrations/auth-db/${target}_down.sql"
     else
-      dotnet ef migrations script "$prev" "$target" --idempotent \
+      dotnet ef migrations script "$prev" "$target" --no-transactions \
         --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
         --output "docker/migrations/auth-db/${target}.sql"
-      dotnet ef migrations script "$target" "$prev" --idempotent \
+      dotnet ef migrations script "$target" "$prev" --no-transactions \
         --project {{auth_migrations}} --startup-project {{auth_startup}} --context {{auth_context}} \
         --output "docker/migrations/auth-db/${target}_down.sql"
     fi
     echo "Generated: docker/migrations/auth-db/${target}.sql + ${target}_down.sql"
 
-# Generate incremental SQL for a specific Permission migration
-# Usage: just generate-sql-perm <migration-name>
+# Generate SQL for a specific Permission migration
 generate-sql-perm name:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -274,37 +451,28 @@ generate-sql-perm name:
     found=false
     while IFS= read -r line; do
       [ -z "$line" ] && continue
-      if [ "$line" = "$target" ]; then
-        found=true
-        break
-      fi
+      if [ "$line" = "$target" ]; then found=true; break; fi
       prev="$line"
     done <<< "$migrations"
-    if [ "$found" = false ]; then
-      echo "Error: Migration '$target' not found in {{perm_context}}"
-      echo "Available migrations:"
-      echo "$migrations"
-      exit 1
-    fi
+    if [ "$found" = false ]; then echo "Error: Migration '$target' not found"; exit 1; fi
     if [ -z "$prev" ]; then
-      dotnet ef migrations script 0 "$target" --idempotent \
+      dotnet ef migrations script 0 "$target" --no-transactions \
         --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
         --output "docker/migrations/permission-db/${target}.sql"
-      dotnet ef migrations script "$target" 0 --idempotent \
+      dotnet ef migrations script "$target" 0 --no-transactions \
         --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
         --output "docker/migrations/permission-db/${target}_down.sql"
     else
-      dotnet ef migrations script "$prev" "$target" --idempotent \
+      dotnet ef migrations script "$prev" "$target" --no-transactions \
         --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
         --output "docker/migrations/permission-db/${target}.sql"
-      dotnet ef migrations script "$target" "$prev" --idempotent \
+      dotnet ef migrations script "$target" "$prev" --no-transactions \
         --project {{perm_migrations}} --startup-project {{perm_startup}} --context {{perm_context}} \
         --output "docker/migrations/permission-db/${target}_down.sql"
     fi
     echo "Generated: docker/migrations/permission-db/${target}.sql + ${target}_down.sql"
 
-# Generate incremental SQL for a specific Expense migration
-# Usage: just generate-sql-expense <migration-name>
+# Generate SQL for a specific Expense migration
 generate-sql-expense name:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -316,162 +484,26 @@ generate-sql-expense name:
     found=false
     while IFS= read -r line; do
       [ -z "$line" ] && continue
-      if [ "$line" = "$target" ]; then
-        found=true
-        break
-      fi
+      if [ "$line" = "$target" ]; then found=true; break; fi
       prev="$line"
     done <<< "$migrations"
-    if [ "$found" = false ]; then
-      echo "Error: Migration '$target' not found in {{expense_context}}"
-      echo "Available migrations:"
-      echo "$migrations"
-      exit 1
-    fi
+    if [ "$found" = false ]; then echo "Error: Migration '$target' not found"; exit 1; fi
     if [ -z "$prev" ]; then
-      dotnet ef migrations script 0 "$target" --idempotent \
+      dotnet ef migrations script 0 "$target" --no-transactions \
         --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
         --output "docker/migrations/expense-db/${target}.sql"
-      dotnet ef migrations script "$target" 0 --idempotent \
+      dotnet ef migrations script "$target" 0 --no-transactions \
         --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
         --output "docker/migrations/expense-db/${target}_down.sql"
     else
-      dotnet ef migrations script "$prev" "$target" --idempotent \
+      dotnet ef migrations script "$prev" "$target" --no-transactions \
         --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
         --output "docker/migrations/expense-db/${target}.sql"
-      dotnet ef migrations script "$target" "$prev" --idempotent \
+      dotnet ef migrations script "$target" "$prev" --no-transactions \
         --project {{expense_migrations}} --startup-project {{expense_startup}} --context {{expense_context}} \
         --output "docker/migrations/expense-db/${target}_down.sql"
     fi
     echo "Generated: docker/migrations/expense-db/${target}.sql + ${target}_down.sql"
-
-# ──────────── SQL Rollback ────────────
-
-# Rollback a specific Auth migration via SQL
-# Usage: just rollback-sql-auth <migration-name>
-rollback-sql-auth name:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    target="{{name}}"
-    sql_files=$(ls docker/migrations/auth-db/*_down.sql 2>/dev/null | sort -r)
-    if [ -z "$sql_files" ]; then
-      echo "No rollback SQL files found in docker/migrations/auth-db/"
-      exit 1
-    fi
-    applied=$(PGPASSWORD=migration_pass psql -U migration_user -d auth-db -h localhost -t -A \
-      -c "SELECT migration_id FROM public.\"__EFMigrationsHistory\" ORDER BY migration_id;" 2>/dev/null || echo "")
-    if ! echo "$applied" | grep -q "^${target}$"; then
-      echo "Error: Migration '$target' is not applied to auth-db"
-      exit 1
-    fi
-    to_revert=()
-    while IFS= read -r f; do
-      [ -z "$f" ] && continue
-      mid=$(basename "$f" _down.sql)
-      if echo "$applied" | grep -q "^${mid}$"; then
-        to_revert+=("$mid")
-        if [ "$mid" = "$target" ]; then
-          break
-        fi
-      fi
-    done <<< "$sql_files"
-    if [ ${#to_revert[@]} -eq 0 ]; then
-      echo "Nothing to rollback for '$target' in auth-db"
-      exit 0
-    fi
-    echo "Rolling back auth-db: ${to_revert[*]}"
-    for mid in "${to_revert[@]}"; do
-      echo "Reverting $mid from auth-db"
-      PGPASSWORD=migration_pass psql -U migration_user -d auth-db -h localhost \
-        -v ON_ERROR_STOP=1 -f "docker/migrations/auth-db/${mid}_down.sql"
-      PGPASSWORD=migration_pass psql -U migration_user -d auth-db -h localhost \
-        -c "DELETE FROM public.\"__EFMigrationsHistory\" WHERE migration_id = '${mid}';"
-    done
-    echo "Rollback complete for auth-db"
-
-# Rollback a specific Permission migration via SQL
-# Usage: just rollback-sql-perm <migration-name>
-rollback-sql-perm name:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    target="{{name}}"
-    sql_files=$(ls docker/migrations/permission-db/*_down.sql 2>/dev/null | sort -r)
-    if [ -z "$sql_files" ]; then
-      echo "No rollback SQL files found in docker/migrations/permission-db/"
-      exit 1
-    fi
-    applied=$(PGPASSWORD=migration_pass psql -U migration_user -d permission-db -h localhost -t -A \
-      -c "SELECT migration_id FROM public.\"__EFMigrationsHistory\" ORDER BY migration_id;" 2>/dev/null || echo "")
-    if ! echo "$applied" | grep -q "^${target}$"; then
-      echo "Error: Migration '$target' is not applied to permission-db"
-      exit 1
-    fi
-    to_revert=()
-    while IFS= read -r f; do
-      [ -z "$f" ] && continue
-      mid=$(basename "$f" _down.sql)
-      if echo "$applied" | grep -q "^${mid}$"; then
-        to_revert+=("$mid")
-        if [ "$mid" = "$target" ]; then
-          break
-        fi
-      fi
-    done <<< "$sql_files"
-    if [ ${#to_revert[@]} -eq 0 ]; then
-      echo "Nothing to rollback for '$target' in permission-db"
-      exit 0
-    fi
-    echo "Rolling back permission-db: ${to_revert[*]}"
-    for mid in "${to_revert[@]}"; do
-      echo "Reverting $mid from permission-db"
-      PGPASSWORD=migration_pass psql -U migration_user -d permission-db -h localhost \
-        -v ON_ERROR_STOP=1 -f "docker/migrations/permission-db/${mid}_down.sql"
-      PGPASSWORD=migration_pass psql -U migration_user -d permission-db -h localhost \
-        -c "DELETE FROM public.\"__EFMigrationsHistory\" WHERE migration_id = '${mid}';"
-    done
-    echo "Rollback complete for permission-db"
-
-# Rollback a specific Expense migration via SQL
-# Usage: just rollback-sql-expense <migration-name>
-rollback-sql-expense name:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    target="{{name}}"
-    sql_files=$(ls docker/migrations/expense-db/*_down.sql 2>/dev/null | sort -r)
-    if [ -z "$sql_files" ]; then
-      echo "No rollback SQL files found in docker/migrations/expense-db/"
-      exit 1
-    fi
-    applied=$(PGPASSWORD=migration_pass psql -U migration_user -d expense-db -h localhost -t -A \
-      -c "SELECT migration_id FROM public.\"__EFMigrationsHistory\" ORDER BY migration_id;" 2>/dev/null || echo "")
-    if ! echo "$applied" | grep -q "^${target}$"; then
-      echo "Error: Migration '$target' is not applied to expense-db"
-      exit 1
-    fi
-    to_revert=()
-    while IFS= read -r f; do
-      [ -z "$f" ] && continue
-      mid=$(basename "$f" _down.sql)
-      if echo "$applied" | grep -q "^${mid}$"; then
-        to_revert+=("$mid")
-        if [ "$mid" = "$target" ]; then
-          break
-        fi
-      fi
-    done <<< "$sql_files"
-    if [ ${#to_revert[@]} -eq 0 ]; then
-      echo "Nothing to rollback for '$target' in expense-db"
-      exit 0
-    fi
-    echo "Rolling back expense-db: ${to_revert[*]}"
-    for mid in "${to_revert[@]}"; do
-      echo "Reverting $mid from expense-db"
-      PGPASSWORD=migration_pass psql -U migration_user -d expense-db -h localhost \
-        -v ON_ERROR_STOP=1 -f "docker/migrations/expense-db/${mid}_down.sql"
-      PGPASSWORD=migration_pass psql -U migration_user -d expense-db -h localhost \
-        -c "DELETE FROM public.\"__EFMigrationsHistory\" WHERE migration_id = '${mid}';"
-    done
-    echo "Rollback complete for expense-db"
 
 # Clean all build artifacts
 clean:

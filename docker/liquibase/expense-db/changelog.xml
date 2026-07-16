@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <include file="expense-db/changesets/001-initial-create.xml" />
+    <include file="expense-db/changesets/002-add-outbox-tables.xml" />
+    <include file="expense-db/changesets/003-add-expense-status.xml" />
+
+</databaseChangeLog>

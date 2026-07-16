@@ -68,10 +68,12 @@ $DC dotnet run --project src/Auth/Auth.Api
 $DC dotnet run --project src/Expense/Expense.Api
 $DC dotnet run --project src/Permission/Permission.Api
 
-# ── EF migrations (per context) ──
+# ── EF migrations (authoring — per context) ──
 $DC dotnet ef migrations add <Name> --project src/Auth/Auth.Infrastructure --startup-project src/Auth/Auth.Api --context AuthDbContext
-$DC dotnet ef database update    --project src/Auth/Auth.Infrastructure --startup-project src/Auth/Auth.Api --context AuthDbContext
 # Same pattern for Permission (PermissionDbContext) and Expense (ApplicationDbContext)
+
+# ── Apply migrations (Liquibase — via justfile) ──
+$DC just migrate-auth / migrate-perm / migrate-expense / migrate-all
 
 # ── Justfile recipes (run inside app container) ──
 $DC just build
@@ -83,7 +85,8 @@ $DC just add-migration-auth "Name" / add-migration-perm "Name" / add-migration-e
 $DC just migrate-auth / migrate-perm / migrate-expense / migrate-all
 $DC just rollback-auth / rollback-perm / rollback-expense
 $DC just rollback-to-auth <migration> / rollback-to-perm <migration> / rollback-to-expense <migration>
-$DC just generate-sql-init                    # generate all SQL scripts (up + down) for all contexts
+$DC just list-migrations-auth / list-migrations-perm / list-migrations-expense
+$DC just generate-sql-init                    # generate SQL from EF Core migrations for all contexts
 $DC just generate-sql-auth <timestamp>        # generate SQL for a specific auth migration
 $DC just generate-sql-perm <timestamp>        # generate SQL for a specific permission migration
 $DC just generate-sql-expense <timestamp>     # generate SQL for a specific expense migration
@@ -123,4 +126,4 @@ Connection strings use `host.docker.internal` for reaching the host from contain
 - `.editorconfig` is 424 lines with strict CA/IDE/Sonar rules — many disabled intentionally
 - `justfile` with ~30 recipes for per-context operations — run via `$DC just <recipe>`, or `$DC just --list` to see all available recipes
 - `manual-tests/` with `api.http` and `full_test.sh` E2E script
-- SQL migration pipeline: generate up/down scripts from EF Core migrations for sandbox/production use, with idempotent application and rollback support
+- Liquibase for sandbox/production migration application (EF Core migrations remain the source of truth for authoring)
