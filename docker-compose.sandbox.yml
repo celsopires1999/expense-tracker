@@ -97,6 +97,7 @@ services:
       RabbitMQ__User: guest
       RabbitMQ__Password: guest
       Serilog__MinimumLevel__Default: Information
+      Serilog__MinimumLevel__Override__Microsoft: Warning
       Serilog__WriteTo__0__Name: Console
       Serilog__WriteTo__1__Name: Seq
       Serilog__WriteTo__1__Args__ServerUrl: http://seq:5341
@@ -128,6 +129,7 @@ services:
       RabbitMQ__User: guest
       RabbitMQ__Password: guest
       Serilog__MinimumLevel__Default: Information
+      Serilog__MinimumLevel__Override__Microsoft: Warning
       Serilog__WriteTo__0__Name: Console
       Serilog__WriteTo__1__Name: Seq
       Serilog__WriteTo__1__Args__ServerUrl: http://seq:5341
@@ -160,6 +162,7 @@ services:
       RabbitMQ__User: guest
       RabbitMQ__Password: guest
       Serilog__MinimumLevel__Default: Information
+      Serilog__MinimumLevel__Override__Microsoft: Warning
       Serilog__WriteTo__0__Name: Console
       Serilog__WriteTo__1__Name: Seq
       Serilog__WriteTo__1__Args__ServerUrl: http://seq:5341
