@@ -1,5 +1,6 @@
 using Auth.Application.Abstractions.Messaging;
 using Auth.Application.Users;
+using Auth.Application.Users.AssignRole;
 using Auth.Application.Users.GetById;
 using Auth.Application.Users.Register;
 using Auth.Domain.Users;
@@ -75,6 +76,39 @@ public sealed class GetUserByIdQueryTests : IClassFixture<AuthApiFixture>, IAsyn
         Assert.Contains("NotFound", result.Error.Code);
     }
 
+    [Fact]
+    public async Task GetById_ShouldIncludeRoles_WhenAssigned()
+    {
+        Guid userId = await CreateUserAsync("rolesbyid@example.com");
+        await AssignRoleAsync(userId, new Guid("11111111-1111-1111-1111-111111111111"));
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IQueryHandler<GetUserByIdQuery, UserResponse> handler =
+            scope.ServiceProvider.GetRequiredService<IQueryHandler<GetUserByIdQuery, UserResponse>>();
+
+        GetUserByIdQuery query = new(userId);
+        Result<UserResponse> result = await handler.Handle(query, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("Admin", result.Value.Roles);
+    }
+
+    [Fact]
+    public async Task GetById_ShouldReturnDefaultRole_WhenOnlyRegistered()
+    {
+        Guid userId = await CreateUserAsync("defaultrolebyid@example.com");
+
+        using IServiceScope scope = _factory.Services.CreateScope();
+        IQueryHandler<GetUserByIdQuery, UserResponse> handler =
+            scope.ServiceProvider.GetRequiredService<IQueryHandler<GetUserByIdQuery, UserResponse>>();
+
+        GetUserByIdQuery query = new(userId);
+        Result<UserResponse> result = await handler.Handle(query, CancellationToken.None);
+
+        Assert.True(result.IsSuccess);
+        Assert.Contains("Standard", result.Value.Roles);
+    }
+
     private async Task<Guid> CreateUserAsync(string email)
     {
         using IServiceScope scope = _factory.Services.CreateScope();
@@ -84,5 +118,15 @@ public sealed class GetUserByIdQueryTests : IClassFixture<AuthApiFixture>, IAsyn
         RegisterUserCommand command = new(email, "John", "Doe", "Password123!");
         Result<Guid> result = await handler.Handle(command, CancellationToken.None);
         return result.Value;
+    }
+
+    private async Task AssignRoleAsync(Guid userId, Guid roleId)
+    {
+        using IServiceScope scope = _factory.Services.CreateScope();
+        ICommandHandler<AssignRoleCommand> handler =
+            scope.ServiceProvider.GetRequiredService<ICommandHandler<AssignRoleCommand>>();
+
+        AssignRoleCommand command = new(userId, roleId);
+        await handler.Handle(command, CancellationToken.None);
     }
 }

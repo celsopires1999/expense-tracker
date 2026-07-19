@@ -18,7 +18,11 @@ internal sealed class GetUserByIdQueryHandler(IAuthDbContext context)
                 Id = u.Id,
                 FirstName = u.FirstName,
                 LastName = u.LastName,
-                Email = u.Email
+                Email = u.Email,
+                Roles = context.UserRoles
+                    .Where(ur => ur.UserId == u.Id)
+                    .Join(context.Roles, ur => ur.RoleId, r => r.Id, (ur, r) => r.Name)
+                    .ToArray()
             })
             .SingleOrDefaultAsync(cancellationToken);
 

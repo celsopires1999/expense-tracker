@@ -104,3 +104,24 @@ The Auth Service SHALL expose `GET /auth/users` returning a list of all register
 #### Scenario: Unauthorized access to list users
 - **WHEN** an unauthenticated client sends `GET /auth/users`
 - **THEN** the response returns 401 Unauthorized
+
+### Requirement: Auth Service exposes endpoint to get user by ID
+The Auth Service SHALL expose `GET /auth/users/{userId}` returning a single user with their assigned roles.
+
+#### Scenario: Authorized user fetches user by ID
+- **WHEN** an authenticated client sends `GET /auth/users/{userId}` for an existing user
+- **THEN** the response returns 200 with a user object
+- **AND** the user object contains `id`, `firstName`, `lastName`, `email`, and `roles` (array of role name strings)
+
+#### Scenario: User not found
+- **WHEN** an authenticated client sends `GET /auth/users/{userId}` for a nonexistent user
+- **THEN** the response returns 404 Not Found
+
+#### Scenario: User with no roles
+- **WHEN** an authenticated client sends `GET /auth/users/{userId}` for a user with no assigned roles
+- **THEN** the response returns 200 with a user object
+- **AND** the `roles` array is empty
+
+#### Scenario: Unauthorized access to get user
+- **WHEN** an unauthenticated client sends `GET /auth/users/{userId}`
+- **THEN** the response returns 401 Unauthorized
