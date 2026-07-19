@@ -22,6 +22,16 @@ internal static class ServiceCollectionExtensions
             };
 
             o.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, securityScheme);
+        
+            o.AddSecurityRequirement(document => new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecuritySchemeReference(JwtBearerDefaults.AuthenticationScheme, document),
+                    []
+                }
+            });
+        
+        
         });
 
         return services;

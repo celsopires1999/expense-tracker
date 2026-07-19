@@ -84,7 +84,7 @@ services:
       dockerfile: src/Auth/Auth.Api/Dockerfile
     container_name: sandbox-auth-api
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5100
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=auth-db;Username=auth_app;Password=auth_app_pass
       Jwt__PrivateKeyPath: /app/keys/auth-private.pem
@@ -118,7 +118,7 @@ services:
       dockerfile: src/Permission/Permission.Api/Dockerfile
     container_name: sandbox-permission-api
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5200
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=permission-db;Username=perm_app;Password=perm_app_pass
       Jwt__Issuer: auth-service
@@ -150,7 +150,7 @@ services:
       dockerfile: src/Expense/Expense.Api/Dockerfile
     container_name: sandbox-expense-api
     environment:
-      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://+:5000
       ConnectionStrings__Database: Host=postgres;Port=5432;Database=expense-db;Username=expense_app;Password=expense_app_pass
       Jwt__Issuer: auth-service

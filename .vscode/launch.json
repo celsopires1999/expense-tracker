@@ -1,11 +1,26 @@
 {
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Web.Api",
-            "type": "dotnet",
+            "name": "Debug Auth Api",
+            "type": "coreclr",
             "request": "launch",
-            "projectPath": "${workspaceFolder}/src/Web.Api/Web.Api.csproj"
+            "preLaunchTask": "build auth api",
+            "program": "${workspaceFolder}/src/Auth/Auth.Api/bin/Debug/net10.0/Auth.Api.dll",
+            "args": [],
+            "cwd": "${workspaceFolder}/src/Auth/Auth.Api",
+            "stopAtEntry": false,
+            "serverReadyAction": {
+                "action": "openExternally",
+                "pattern": "\\bNow listening on:\\s+(https?://\\S+)"
+            },
+            "env": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://0.0.0.0:5100"
+            }
         }
     ]
 }
